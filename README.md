@@ -1,51 +1,60 @@
-# Okta Security Health Check
+# Okta Security Health Check 🔒
 
-A Node.js application that executes security detection rules against your Okta tenant using the System Log API. This tool implements detection rules from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security issues.
+[![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/github-ivangotti%2Fokta--security--healthcheck-blue)](https://github.com/ivangotti/okta-security-healthcheck)
 
-## Features
+A powerful Node.js application that executes security detection rules against your Okta tenant using the System Log API. This tool implements detection rules from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security threats in real-time.
 
-- Executes 31+ security detection rules from Okta's detection catalog
-- Verbose terminal output explaining each detection and its results
-- Color-coded results for easy scanning
-- Supports filtering by specific detections or time ranges
-- Caches detection rules locally for faster subsequent runs
-- Handles pagination and rate limiting automatically
+## 🚀 Features
 
-## Detection Categories
+- **22+ Security Detections** - Automatically executes OIE-compatible detection rules
+- **Dynamic Updates** - Fetches latest detection rules from GitHub on every run
+- **Verbose Output** - Color-coded terminal output with detailed event information
+- **Smart Caching** - Falls back to cached detections if GitHub is unavailable
+- **Offline Mode** - Run scans using cached detection rules
+- **Comprehensive Summary** - Clear security findings report with MITRE ATT&CK tactics
+
+## 🎯 What It Detects
 
 This tool scans for various security threats including:
 
-- Unauthorized admin console access attempts
-- Weak MFA usage in admin console
-- API token creation and excessive access
-- Authentication policy downgrades
-- Device enrollment anomalies
-- Adversary-in-the-middle (AiTM) phishing attacks
-- Brute force and password spray attempts
-- Session hijacking indicators
-- Privilege escalation attempts
-- Log tampering
+| Category | Detections |
+|----------|-----------|
+| **Access Control** | Unauthorized admin console access, weak MFA usage |
+| **Authentication** | Policy downgrades, suspicious MFA abandonment |
+| **Persistence** | New API tokens, new admin accounts |
+| **Credential Access** | Password spray, brute force attempts |
+| **Lateral Movement** | Session cookie theft, unusual device access |
+| **Defense Evasion** | Log stream tampering |
+| **Collection** | OAuth client secret reads |
+| **Impact** | Protected action changes |
 
-## Prerequisites
+## 📋 Prerequisites
 
 - Node.js 14 or higher
 - An Okta tenant with admin access
 - Okta API token with `okta.logs.read` scope
 
-## Installation
+## 🔧 Installation
 
-1. Clone or download this repository
-2. Install dependencies:
+1. **Clone the repository**
+```bash
+git clone https://github.com/ivangotti/okta-security-healthcheck.git
+cd okta-security-healthcheck
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. Create configuration file:
+3. **Configure your Okta credentials**
 ```bash
 cp config.json.example config.json
 ```
 
-4. Edit `config.json` with your Okta credentials:
+4. **Edit `config.json` with your Okta details**
 ```json
 {
   "okta": {
@@ -59,161 +68,181 @@ cp config.json.example config.json
 }
 ```
 
-## Getting an Okta API Token
+## 🔑 Getting an Okta API Token
 
-1. Log in to your Okta Admin Console
+1. Log in to your **Okta Admin Console**
 2. Navigate to **Security > API > Tokens**
 3. Click **Create Token**
 4. Give it a name (e.g., "Security Health Check")
-5. Copy the token immediately (you won't see it again)
+5. Copy the token immediately (you won't see it again!)
 6. Paste it into your `config.json`
 
-The token needs the `okta.logs.read` scope to access system logs.
+**Note:** The token needs the `okta.logs.read` scope to access system logs.
 
-## Usage
+## 💻 Usage
 
-**Note:** By default, the app fetches the latest detection rules from GitHub on every run to ensure you always have the most up-to-date security checks. This means new detection rules are automatically included as they're added to the [Okta customer-detections repository](https://github.com/okta/customer-detections).
+> **Note:** The app automatically fetches the latest detection rules from GitHub on every run, ensuring you always have the most up-to-date security checks.
 
 ### Run All Detections
 ```bash
 npm start
-# or
-node src/index.js
 ```
 
 ### List Available Detections
 ```bash
 npm start -- --list
-# or
-node src/index.js --list
 ```
 
 ### Run a Specific Detection
 ```bash
 npm start -- --detection "admin console"
-# or
-node src/index.js --detection "admin console"
 ```
 
 ### Override Time Range
 ```bash
 npm start -- --since "2024-02-01T00:00:00Z"
-# or
-node src/index.js --since "2024-02-01T00:00:00Z"
 ```
 
-### Use Offline Mode (Cached Detections)
+### Use Offline Mode
 ```bash
 npm start -- --offline
-# or
-node src/index.js --offline
 ```
-
-Use this when you want to skip fetching from GitHub and use previously cached detection rules.
+Use this to skip GitHub fetch and use cached detection rules.
 
 ### Show Help
 ```bash
 npm start -- --help
-# or
-node src/index.js --help
 ```
 
-## Output Format
+## 📊 Output Example
 
 For each detection, the tool displays:
 
-1. **Detection Name and Description** - What it's looking for
-2. **Threat Intelligence** - MITRE ATT&CK tactics and techniques
-3. **Query** - The exact Okta System Log filter being executed
-4. **Results** - Events found (if any) with details:
-   - Timestamp
-   - User/actor
-   - IP address and location
-   - Outcome and reason
-   - Target resources
-5. **Analysis** - Interpretation of findings
-6. **False Positives** - Known benign scenarios to consider
-
-### Example Output
-
 ```
 ================================================================================
-[1/31] Access to Admin Console Denied
+[1/22] New Okta API Token Created
 ================================================================================
 
 Description:
-  Detects when an attempt was made to access the Okta Admin Console but failed.
-  Adversaries may try to access after compromising an admin but get denied.
-
-Threat Intelligence:
-  Tactic: Initial Access
-  Technique: T1078: Valid Accounts
-
-Okta System Log Query:
-  eventType eq "user.session.access_admin_app" AND outcome.result eq "FAILURE"
+  Detects a new Okta API token being created by an Okta Administrator.
+  An adversary with access to an admin account may create an API token
+  to maintain persistence in the environment.
 
 Executing query...
 
-Results: 3 event(s) found
+Results: 6 event(s) found
 
 ⚠️  FINDINGS DETECTED
 
 Event 1:
-  UUID: abc123...
-  Time: 2024-02-11T10:23:45Z
-  Event Type: user.session.access_admin_app
+  Time: 2026-02-11T17:32:49.940Z
+  Event Type: system.api_token.create
   Actor: admin@company.com
   IP Address: 192.168.1.100
-  Location: San Francisco, CA, US
-  Outcome: FAILURE
-  Reason: Policy evaluation failed
-
-...
+  Location: San Francisco, CA, United States
+  Outcome: SUCCESS
+  Target: HealthCheck
 
 Analysis:
-  ⚠️  3 event(s) matching this detection pattern
+  ⚠️  6 event(s) matching this detection pattern
   Review these events to determine if they represent genuine security concerns
 
 False Positives:
-  - Legitimate administrative users causing failures due to user-error.
-    Look for multiple instances from the same source.
+  - Legitimate new Okta API tokens being created for approved integrations
 
 ================================================================================
+SECURITY SCAN SUMMARY
+================================================================================
+
+Detections Executed: 22
+✓ Successful: 22
+
+Security Findings: 7 detection(s) triggered
+Total Events: 159
+
+⚠️  DETECTIONS WITH FINDINGS:
+
+1. New Okta API Token Created
+   Events Found: 6
+   Tactic: Persistence
+
+2. ThreatInsight - Password Spray
+   Events Found: 100
+   Tactic: Credential Access
+
+3. OAuth Client Secret Read
+   Events Found: 46
+   Tactic: Credential Access
+
+⚠️  Action Required: Review the findings above for potential security issues
+   Scroll up to see detailed event information for each detection
 ```
 
-## Security Considerations
+## 🎨 Output Features
 
-- **API Token Security**: Keep your API token secure. Never commit it to version control.
-- **Read-Only Access**: This tool only reads system logs and makes no changes to your Okta configuration.
-- **Sensitive Data**: System logs contain sensitive information (usernames, IP addresses). Handle results appropriately.
-- **Rate Limits**: The tool includes delays to respect Okta API rate limits.
+- **Color-coded results** for easy scanning
+- **Bold cyan labels** with white values for clarity
+- **Outcome highlighting**:
+  - 🟢 SUCCESS (green)
+  - 🔴 FAILURE (red)
+  - ⚪ DENY (white)
+- **Comprehensive event details** including time, actor, IP, location
+- **MITRE ATT&CK tactics** for threat context
+- **False positive guidance** to reduce alert fatigue
 
-## Troubleshooting
+## 🏗️ Architecture
 
-### Connection Errors
-- Verify your Okta domain is correct (e.g., `your-domain.okta.com`, not `https://your-domain.okta.com`)
-- Check that your API token is valid and hasn't expired
+```
+sec-healthcheck/
+├── src/
+│   ├── index.js            # Main entry point & CLI
+│   ├── oktaClient.js       # Okta API wrapper
+│   ├── detectionLoader.js  # GitHub detection fetcher
+│   └── detectionRunner.js  # Detection executor
+├── config.json.example     # Configuration template
+├── package.json           # Dependencies
+├── README.md             # This file
+└── CLAUDE.md            # Developer documentation
+```
 
-### Authentication Errors
-- Ensure your API token has the `okta.logs.read` scope
-- Verify you copied the entire token without extra spaces
+### How It Works
 
-### No Events Found
-- This is normal if no security events match the detection criteria
-- Try a wider time range with `--since` parameter
-- Some detections may not trigger in your environment
+1. **Detection Loader** fetches 31 YAML files from [Okta customer-detections](https://github.com/okta/customer-detections)
+2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats)
+3. **Okta Client** executes each query against your tenant's System Log API
+4. **Runner** displays results with comprehensive context and analysis
+5. **Smart Caching** saves detections locally as backup
 
-### Skipped Detections
-Some detections require SIEM-specific implementations (Splunk, Datadog) and cannot be directly executed via the Okta API. These are listed at the end of the scan.
+## 🔒 Security Considerations
 
-## Contributing
+- **API Token Security**: Your API token is never committed to git (excluded in `.gitignore`)
+- **Read-Only Access**: This tool only reads system logs, no write operations
+- **Sensitive Data**: System logs contain usernames and IPs - handle results appropriately
+- **Rate Limits**: Built-in delays respect Okta API rate limits
 
-This tool is designed to work with the community-maintained detection rules from Okta. To suggest improvements or report issues with specific detections, please visit the [Okta customer-detections repository](https://github.com/okta/customer-detections).
+## 🐛 Troubleshooting
 
-## License
+| Issue | Solution |
+|-------|----------|
+| **Connection test failed** | Check domain and API token in `config.json` |
+| **401 Unauthorized** | Verify token has `okta.logs.read` scope |
+| **No events found** | Normal if no security events match. Try wider time range with `--since` |
+| **Rate limit exceeded** | App includes delays, but you may need to wait before retrying |
+
+## 🤝 Contributing
+
+This tool uses community-maintained detection rules from Okta. To suggest improvements or report issues with specific detections, visit the [Okta customer-detections repository](https://github.com/okta/customer-detections).
+
+## 📝 License
 
 ISC
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 This tool is provided as-is for security monitoring purposes. Always review and validate findings in the context of your environment before taking action.
+
+---
+
+**Built with ❤️ for Okta security professionals**
+
+[![Star on GitHub](https://img.shields.io/github/stars/ivangotti/okta-security-healthcheck?style=social)](https://github.com/ivangotti/okta-security-healthcheck)
