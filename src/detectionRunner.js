@@ -46,8 +46,6 @@ class DetectionRunner {
       await this.sleep(200);
     }
 
-    this.printSummary(results);
-
     return results;
   }
 
