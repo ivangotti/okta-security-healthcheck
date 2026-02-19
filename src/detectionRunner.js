@@ -10,11 +10,13 @@ class DetectionRunner {
 
   async runAllDetections(detections) {
     const executable = detections.filter(d => d.queryType === 'OIE');
+    const detectionCount = executable.filter(d => d.sourceType === 'detection').length;
+    const huntCount = executable.filter(d => d.sourceType === 'hunt').length;
 
     console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
     console.log(chalk.bold.cyan('Okta Security Detection Scanner'));
     console.log(chalk.bold.cyan('='.repeat(80)));
-    console.log(chalk.green(`Running ${executable.length} security detections...\n`));
+    console.log(chalk.green(`Running ${executable.length} security checks (${detectionCount} detections, ${huntCount} hunts)...\n`));
 
     const results = {
       total: executable.length,
@@ -73,8 +75,11 @@ class DetectionRunner {
   }
 
   async runDetectionWithEvents(detection, index, total) {
+    const typeLabel = detection.sourceType === 'hunt' ? '[HUNT]' : '[DETECTION]';
+    const typeColor = detection.sourceType === 'hunt' ? chalk.magenta : chalk.cyan;
+
     console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
-    console.log(chalk.bold.cyan(`[${index}/${total}] ${detection.title}`));
+    console.log(chalk.bold.cyan(`[${index}/${total}] `) + typeColor.bold(typeLabel) + chalk.bold.cyan(` ${detection.title}`));
     console.log(chalk.bold.cyan('='.repeat(80)));
 
     // Description

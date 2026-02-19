@@ -74,11 +74,14 @@ class SecurityHealthCheck {
 
   async listDetections(useCache = false) {
     const detections = await this.detectionLoader.loadDetections(!useCache);
+    const detectionCount = detections.filter(d => d.sourceType === 'detection').length;
+    const huntCount = detections.filter(d => d.sourceType === 'hunt').length;
 
-    console.log(chalk.bold.cyan('\nAvailable Security Detections:\n'));
+    console.log(chalk.bold.cyan('\nAvailable Security Detections and Hunts:\n'));
 
     detections.forEach((detection, i) => {
-      console.log(chalk.green(`${i + 1}. ${detection.title}`));
+      const typeLabel = detection.sourceType === 'hunt' ? chalk.magenta('[HUNT]') : chalk.cyan('[DETECTION]');
+      console.log(typeLabel + ' ' + chalk.green(`${i + 1}. ${detection.title}`));
       if (detection.description) {
         const shortDesc = detection.description.trim().split('\n')[0];
         console.log(chalk.gray(`   ${shortDesc}`));
@@ -92,7 +95,7 @@ class SecurityHealthCheck {
       console.log('');
     });
 
-    console.log(chalk.white(`Total: ${detections.length} detections\n`));
+    console.log(chalk.white(`Total: ${detections.length} checks (${detectionCount} detections, ${huntCount} hunts)\n`));
   }
 
   async runSpecificDetection(detectionName, useCache = false) {
@@ -105,8 +108,8 @@ class SecurityHealthCheck {
     );
 
     if (!detection) {
-      console.error(chalk.red(`\nError: Detection not found: ${detectionName}`));
-      console.log(chalk.yellow('\nUse --list to see all available detections\n'));
+      console.error(chalk.red(`\nError: Detection or hunt not found: ${detectionName}`));
+      console.log(chalk.yellow('\nUse --list to see all available detections and hunts\n'));
       process.exit(1);
     }
 
@@ -170,14 +173,14 @@ class SecurityHealthCheck {
     console.log(chalk.bold.cyan('\nOkta Security Health Check\n'));
     console.log(chalk.white('Usage: node src/index.js [options]\n'));
     console.log(chalk.white('Options:'));
-    console.log(chalk.gray('  --list, -l                List all available detections'));
-    console.log(chalk.gray('  --detection, -d <name>    Run a specific detection'));
+    console.log(chalk.gray('  --list, -l                List all available detections and hunts'));
+    console.log(chalk.gray('  --detection, -d <name>    Run a specific detection or hunt'));
     console.log(chalk.gray('  --since, -s <date>        Override query start time (ISO 8601 format)'));
-    console.log(chalk.gray('  --offline, -o             Use cached detections (skip GitHub fetch)'));
+    console.log(chalk.gray('  --offline, -o             Use cached rules (skip GitHub fetch)'));
     console.log(chalk.gray('  --help, -h                Show this help message\n'));
     console.log(chalk.white('Note:'));
-    console.log(chalk.gray('  By default, the app fetches the latest detection rules from GitHub'));
-    console.log(chalk.gray('  to ensure you have the most up-to-date security checks.\n'));
+    console.log(chalk.gray('  By default, the app fetches the latest detection rules and threat hunts'));
+    console.log(chalk.gray('  from GitHub to ensure you have the most up-to-date security checks.\n'));
     console.log(chalk.white('Examples:'));
     console.log(chalk.gray('  node src/index.js'));
     console.log(chalk.gray('  node src/index.js --list'));
@@ -207,7 +210,7 @@ class SecurityHealthCheck {
       }
 
       if (options.offline) {
-        console.log(chalk.yellow('Running in offline mode - using cached detections\n'));
+        console.log(chalk.yellow('Running in offline mode - using cached detections and hunts\n'));
       }
 
       if (options.list) {

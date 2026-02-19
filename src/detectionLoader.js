@@ -6,8 +6,20 @@ const chalk = require('chalk');
 
 class DetectionLoader {
   constructor() {
-    this.githubBaseUrl = 'https://api.github.com/repos/okta/customer-detections/contents/detections';
-    this.rawBaseUrl = 'https://raw.githubusercontent.com/okta/customer-detections/master/detections';
+    this.sources = [
+      {
+        name: 'detections',
+        githubBaseUrl: 'https://api.github.com/repos/okta/customer-detections/contents/detections',
+        rawBaseUrl: 'https://raw.githubusercontent.com/okta/customer-detections/master/detections',
+        type: 'detection'
+      },
+      {
+        name: 'hunts',
+        githubBaseUrl: 'https://api.github.com/repos/okta/customer-detections/contents/hunts',
+        rawBaseUrl: 'https://raw.githubusercontent.com/okta/customer-detections/master/hunts',
+        type: 'hunt'
+      }
+    ];
     this.cacheDir = path.join(process.cwd(), 'detections');
   }
 
@@ -23,57 +35,82 @@ class DetectionLoader {
         try {
           const cached = await fs.readFile(cacheFile, 'utf-8');
           const detections = JSON.parse(cached);
-          console.log(chalk.gray(`Loaded ${detections.length} detections from cache (offline mode)`));
+          console.log(chalk.gray(`Loaded ${detections.length} detections and hunts from cache (offline mode)`));
           return detections;
         } catch (err) {
           console.log(chalk.yellow('Cache not found, fetching from GitHub...'));
         }
       }
 
-      console.log(chalk.cyan('Fetching latest detection rules from GitHub...'));
+      console.log(chalk.cyan('Fetching latest detection rules and hunts from GitHub...'));
 
-      // Get list of detection files
-      const response = await axios.get(this.githubBaseUrl);
-      const files = response.data.filter(file => file.name.endsWith('.yml'));
+      const allDetections = [];
+      let totalLoadedCount = 0;
+      let totalSkippedCount = 0;
 
-      const detections = [];
-      let loadedCount = 0;
-      let skippedCount = 0;
+      // Load from each source (detections and hunts)
+      for (const source of this.sources) {
+        console.log(chalk.gray(`  Fetching ${source.name}...`));
 
-      for (const file of files) {
         try {
-          const yamlResponse = await axios.get(`${this.rawBaseUrl}/${file.name}`);
-          const detection = yaml.load(yamlResponse.data);
+          // Get list of files from this source
+          const response = await axios.get(source.githubBaseUrl);
+          const files = response.data.filter(file => file.name.endsWith('.yml'));
 
-          // Add filename for reference
-          detection.filename = file.name;
+          let loadedCount = 0;
+          let skippedCount = 0;
 
-          // Check if detection has OIE query - only load OIE detections
-          if (detection.detection &&
-              detection.detection.okta_systemlog &&
-              detection.detection.okta_systemlog.OIE) {
-            detection.queryType = 'OIE';
-            detection.query = detection.detection.okta_systemlog.OIE.trim();
-            detections.push(detection);
-            loadedCount++;
-          } else {
-            skippedCount++;
+          for (const file of files) {
+            try {
+              const yamlResponse = await axios.get(`${source.rawBaseUrl}/${file.name}`);
+              const detection = yaml.load(yamlResponse.data);
+
+              // Add metadata for reference
+              detection.filename = file.name;
+              detection.sourceType = source.type;
+
+              // Check if detection has OIE query - only load OIE detections
+              if (detection.detection &&
+                  detection.detection.okta_systemlog &&
+                  detection.detection.okta_systemlog.OIE) {
+                detection.queryType = 'OIE';
+                detection.query = detection.detection.okta_systemlog.OIE.trim();
+                allDetections.push(detection);
+                loadedCount++;
+              } else {
+                skippedCount++;
+              }
+
+              // Small delay to avoid rate limiting
+              await this.sleep(100);
+            } catch (error) {
+              console.warn(chalk.red(`    ✗ Failed to load ${file.name}: ${error.message}`));
+            }
           }
 
-          // Small delay to avoid rate limiting
-          await this.sleep(100);
+          console.log(chalk.green(`    ✓ Loaded ${loadedCount} ${source.name}`));
+          if (skippedCount > 0) {
+            console.log(chalk.gray(`      (Skipped ${skippedCount} non-OIE ${source.name})`));
+          }
+
+          totalLoadedCount += loadedCount;
+          totalSkippedCount += skippedCount;
         } catch (error) {
-          console.warn(chalk.red(`  ✗ Failed to load ${file.name}: ${error.message}`));
+          console.warn(chalk.red(`    ✗ Failed to fetch ${source.name}: ${error.message}`));
         }
       }
 
       // Save to cache as backup
-      await fs.writeFile(cacheFile, JSON.stringify(detections, null, 2));
+      await fs.writeFile(cacheFile, JSON.stringify(allDetections, null, 2));
 
-      console.log(chalk.green(`✓ Loaded ${loadedCount} executable detections from GitHub`));
-      console.log(chalk.gray(`  (Skipped ${skippedCount} non-OIE detections)\n`));
+      console.log(chalk.green(`\n✓ Total: ${totalLoadedCount} executable detections and hunts from GitHub`));
+      if (totalSkippedCount > 0) {
+        console.log(chalk.gray(`  (Skipped ${totalSkippedCount} non-OIE items)\n`));
+      } else {
+        console.log('');
+      }
 
-      return detections;
+      return allDetections;
     } catch (error) {
       // If GitHub fetch fails, try to load from cache as fallback
       console.error(chalk.red(`Failed to fetch from GitHub: ${error.message}`));
@@ -83,10 +120,10 @@ class DetectionLoader {
         const cacheFile = path.join(this.cacheDir, 'detections.json');
         const cached = await fs.readFile(cacheFile, 'utf-8');
         const detections = JSON.parse(cached);
-        console.log(chalk.yellow(`⚠ Loaded ${detections.length} detections from cache (GitHub unavailable)\n`));
+        console.log(chalk.yellow(`⚠ Loaded ${detections.length} detections and hunts from cache (GitHub unavailable)\n`));
         return detections;
       } catch (cacheError) {
-        throw new Error(`Failed to load detections from GitHub and no cache available: ${error.message}`);
+        throw new Error(`Failed to load detections and hunts from GitHub and no cache available: ${error.message}`);
       }
     }
   }

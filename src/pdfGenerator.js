@@ -69,7 +69,7 @@ class PDFGenerator {
     doc.fontSize(18)
        .fillColor('#555')
        .font('Helvetica')
-       .text('Security Detection Report', { align: 'center' });
+       .text('Security Detection & Threat Hunt Report', { align: 'center' });
 
     doc.moveDown(3);
 
@@ -123,8 +123,10 @@ class PDFGenerator {
 
     // Calculate statistics
     const detectionResults = findings.detectionResults || [];
-    const totalDetections = detectionResults.length;
-    const detectionsWithFindings = detectionResults.filter(d => d.events && d.events.length > 0).length;
+    const totalChecks = detectionResults.length;
+    const totalDetections = detectionResults.filter(d => d.sourceType === 'detection').length;
+    const totalHunts = detectionResults.filter(d => d.sourceType === 'hunt').length;
+    const checksWithFindings = detectionResults.filter(d => d.events && d.events.length > 0).length;
     const totalEvents = detectionResults.reduce((sum, d) => sum + (d.events ? d.events.length : 0), 0);
 
     // Statistics
@@ -138,19 +140,19 @@ class PDFGenerator {
     doc.fontSize(11)
        .fillColor('#666')
        .font('Helvetica')
-       .text(`• Total Detections Executed: ${totalDetections}`)
-       .text(`• Detections Triggered: ${detectionsWithFindings}`)
+       .text(`• Total Security Checks: ${totalChecks} (${totalDetections} detections, ${totalHunts} hunts)`)
+       .text(`• Checks Triggered: ${checksWithFindings}`)
        .text(`• Total Events Found: ${totalEvents}`);
 
     doc.moveDown(1.5);
 
     // Risk level
     let riskLevel, riskColor, riskText;
-    if (detectionsWithFindings === 0) {
+    if (checksWithFindings === 0) {
       riskLevel = 'LOW RISK';
       riskColor = '#4CAF50';
       riskText = 'No security threats detected. Your Okta environment appears secure.';
-    } else if (detectionsWithFindings <= 3) {
+    } else if (checksWithFindings <= 3) {
       riskLevel = 'MODERATE RISK';
       riskColor = '#FF9800';
       riskText = 'Some security events detected. Review findings to ensure they are legitimate.';
@@ -180,7 +182,7 @@ class PDFGenerator {
     doc.moveDown(2);
 
     // Key findings
-    if (detectionsWithFindings > 0) {
+    if (checksWithFindings > 0) {
       doc.fontSize(14)
          .fillColor('#333')
          .font('Helvetica-Bold')
@@ -193,10 +195,12 @@ class PDFGenerator {
         .sort((a, b) => b.events.length - a.events.length);
 
       findingsWithEvents.forEach((finding) => {
+        const typeLabel = finding.sourceType === 'hunt' ? '[HUNT]' : '[DETECTION]';
+
         doc.fontSize(11)
            .fillColor('#1976D2')
            .font('Helvetica-Bold')
-           .text(`• ${finding.title}`, { indent: 20 });
+           .text(`• ${typeLabel} ${finding.title}`, { indent: 20 });
 
         doc.fontSize(10)
            .fillColor('#666')
@@ -221,7 +225,7 @@ class PDFGenerator {
       doc.fontSize(12)
          .fillColor('#666')
          .font('Helvetica')
-         .text('All security detections passed without triggering any alerts.', { align: 'center' });
+         .text('All security detections and threat hunts passed without triggering any alerts.', { align: 'center' });
 
       return;
     }
@@ -229,11 +233,14 @@ class PDFGenerator {
     findingsWithEvents.forEach((finding, index) => {
       doc.addPage();
 
-      // Finding title
+      // Finding title with type label
+      const typeLabel = finding.sourceType === 'hunt' ? '[HUNT]' : '[DETECTION]';
+      const typeColor = finding.sourceType === 'hunt' ? '#9C27B0' : '#1976D2';
+
       doc.fontSize(18)
-         .fillColor('#1976D2')
+         .fillColor(typeColor)
          .font('Helvetica-Bold')
-         .text(`${index + 1}. ${finding.title}`);
+         .text(`${index + 1}. ${typeLabel} ${finding.title}`);
 
       doc.moveDown(0.5);
 

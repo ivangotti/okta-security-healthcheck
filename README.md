@@ -4,23 +4,25 @@
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/github-ivangotti%2Fokta--security--healthcheck-blue)](https://github.com/ivangotti/okta-security-healthcheck)
 
-A powerful Node.js application that executes security detection rules against your Okta tenant using the System Log API. This tool implements detection rules from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security threats in real-time.
+A powerful Node.js application that executes security detection rules and threat hunts against your Okta tenant using the System Log API. This tool implements detection rules and threat hunting queries from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security threats in real-time.
 
 ## 🚀 Features
 
-- **22+ Security Detections** - Automatically executes OIE-compatible detection rules
-- **Dynamic Updates** - Fetches latest detection rules from GitHub on every run
+- **43+ Security Checks** - Automatically executes 31+ detection rules and 12+ threat hunts
+- **Dynamic Updates** - Fetches latest detections and hunts from GitHub on every run
 - **PDF Report Generation** - Beautiful, professional PDF reports with all findings automatically generated
 - **Verbose Output** - Color-coded terminal output with detailed event information
-- **Smart Caching** - Falls back to cached detections if GitHub is unavailable
-- **Offline Mode** - Run scans using cached detection rules
+- **Hunt vs Detection** - Clearly distinguishes between real-time detections and proactive threat hunts
+- **Smart Caching** - Falls back to cached rules if GitHub is unavailable
+- **Offline Mode** - Run scans using cached detection rules and hunts
 - **Risk Assessment** - Automatic risk level calculation (LOW/MODERATE/HIGH)
 
 ## 🎯 What It Detects
 
-This tool scans for various security threats including:
+This tool scans for various security threats using both real-time detection rules and proactive threat hunting queries:
 
-| Category | Detections |
+### Security Detections (31+ rules)
+| Category | Examples |
 |----------|-----------|
 | **Access Control** | Unauthorized admin console access, weak MFA usage |
 | **Authentication** | Policy downgrades, suspicious MFA abandonment |
@@ -30,6 +32,16 @@ This tool scans for various security threats including:
 | **Defense Evasion** | Log stream tampering |
 | **Collection** | OAuth client secret reads |
 | **Impact** | Protected action changes |
+
+### Threat Hunts (12+ queries)
+| Category | Examples |
+|----------|-----------|
+| **Authentication Anomalies** | MFA abandonment, failed number challenges, rejected MFA pushes |
+| **Identity Management** | AD user imports, failed identity verification |
+| **Access Patterns** | Sign-ins from proxies, rich client abuse, cloud infra access |
+| **Policy Issues** | Authentication policy denies, app password reveals |
+| **MFA Events** | Factor resets, suspicious MFA patterns |
+| **API Security** | Unusual API activity patterns |
 
 ## 📋 Prerequisites
 
@@ -82,21 +94,22 @@ cp config.json.example config.json
 
 ## 💻 Usage
 
-> **Note:** The app automatically fetches the latest detection rules from GitHub on every run, ensuring you always have the most up-to-date security checks.
+> **Note:** The app automatically fetches the latest detection rules and threat hunts from GitHub on every run, ensuring you always have the most up-to-date security checks.
 
-### Run All Detections
+### Run All Detections and Hunts
 ```bash
 npm start
 ```
 
-### List Available Detections
+### List Available Detections and Hunts
 ```bash
 npm start -- --list
 ```
 
-### Run a Specific Detection
+### Run a Specific Detection or Hunt
 ```bash
 npm start -- --detection "admin console"
+npm start -- --detection "mfa abandonment"
 ```
 
 ### Override Time Range
@@ -108,7 +121,7 @@ npm start -- --since "2024-02-01T00:00:00Z"
 ```bash
 npm start -- --offline
 ```
-Use this to skip GitHub fetch and use cached detection rules.
+Use this to skip GitHub fetch and use cached detection rules and hunts.
 
 ### Show Help
 ```bash
@@ -117,11 +130,11 @@ npm start -- --help
 
 ## 📊 Output Example
 
-For each detection, the tool displays:
+For each detection or hunt, the tool displays a type label and details:
 
 ```
 ================================================================================
-[1/22] New Okta API Token Created
+[1/43] [DETECTION] New Okta API Token Created
 ================================================================================
 
 Description:
@@ -155,10 +168,10 @@ False Positives:
 SECURITY SCAN SUMMARY
 ================================================================================
 
-Detections Executed: 22
-✓ Successful: 22
+Detections Executed: 43
+✓ Successful: 43
 
-Security Findings: 7 detection(s) triggered
+Security Findings: 7 check(s) triggered
 Total Events: 159
 
 ⚠️  DETECTIONS WITH FINDINGS:
@@ -181,6 +194,7 @@ Total Events: 159
 
 ## 🎨 Output Features
 
+- **Type distinction** - Color-coded labels for [DETECTION] (cyan) vs [HUNT] (magenta)
 - **Color-coded results** for easy scanning
 - **Bold cyan labels** with white values for clarity
 - **Outcome highlighting**:
@@ -249,12 +263,12 @@ sec-healthcheck/
 
 ### How It Works
 
-1. **Detection Loader** fetches 31 YAML files from [Okta customer-detections](https://github.com/okta/customer-detections)
-2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats)
+1. **Detection Loader** fetches YAML files from both `/detections` and `/hunts` directories in [Okta customer-detections](https://github.com/okta/customer-detections)
+2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats) and tags each with type (detection vs hunt)
 3. **Okta Client** executes each query against your tenant's System Log API
-4. **Runner** displays results with comprehensive context and analysis
+4. **Runner** displays results with comprehensive context, analysis, and type distinction
 5. **PDF Generator** creates a beautiful report with all findings
-6. **Smart Caching** saves detections locally as backup
+6. **Smart Caching** saves all rules locally as backup
 
 ## 🔒 Security Considerations
 
@@ -274,7 +288,7 @@ sec-healthcheck/
 
 ## 🤝 Contributing
 
-This tool uses community-maintained detection rules from Okta. To suggest improvements or report issues with specific detections, visit the [Okta customer-detections repository](https://github.com/okta/customer-detections).
+This tool uses community-maintained detection rules and threat hunts from Okta. To suggest improvements or report issues with specific detections or hunts, visit the [Okta customer-detections repository](https://github.com/okta/customer-detections).
 
 ## 📝 License
 

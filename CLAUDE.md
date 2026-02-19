@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Node.js security detection scanner that queries Okta System Logs using detection rules from the [Okta customer-detections repository](https://github.com/okta/customer-detections). The application executes 31+ security detection rules and provides verbose terminal output explaining what is being queried and the results.
+This is a Node.js security detection scanner that queries Okta System Logs using detection rules and threat hunts from the [Okta customer-detections repository](https://github.com/okta/customer-detections). The application executes 31+ security detection rules and 12+ threat hunt queries, providing verbose terminal output explaining what is being queried and the results.
 
 ## Development Commands
 
@@ -40,7 +40,7 @@ node src/index.js --offline
 node src/index.js --help
 ```
 
-**Note:** The app dynamically fetches the latest detection rules from GitHub on every run by default. This ensures new detections are automatically included when added to the upstream repository.
+**Note:** The app dynamically fetches the latest detection rules and threat hunts from GitHub on every run by default. This ensures new detections and hunts are automatically included when added to the upstream repository.
 
 ## Architecture
 
@@ -59,27 +59,30 @@ node src/index.js --help
 - Implements rate limiting delays (100ms between requests)
 - Error handling for network and API errors
 
-**src/detectionLoader.js** - Detection Rule Management
-- **Dynamic Loading:** Fetches YAML detection files from GitHub on every run by default
-- Automatically picks up new detection rules as they're added to the upstream repository
+**src/detectionLoader.js** - Detection Rule and Hunt Management
+- **Dynamic Loading:** Fetches YAML files from both `detections/` and `hunts/` directories on GitHub by default
+- Automatically picks up new detection rules and threat hunts as they're added to the upstream repository
 - Parses YAML using `js-yaml` library
-- Filters to only load OIE-compatible detections (skips Splunk/Complex formats)
-- Caches detections locally in `detections/` directory as backup
+- Filters to only load OIE-compatible detections and hunts (skips Splunk/Complex formats)
+- Tags each item with `sourceType` field ('detection' or 'hunt') for distinction
+- Caches all rules locally in `detections/` directory as backup
 - Falls back to cache if GitHub is unavailable
 - Extracts `detection.okta_systemlog.OIE` field as the executable query
-- Use `--offline` flag to skip GitHub fetch and use cached detections
+- Use `--offline` flag to skip GitHub fetch and use cached rules
 
-**src/detectionRunner.js** - Detection Execution Engine
-- Runs detections sequentially with delays
+**src/detectionRunner.js** - Detection and Hunt Execution Engine
+- Runs detections and hunts sequentially with delays
+- Distinguishes between detections and hunts with color-coded labels ([DETECTION] vs [HUNT])
 - Provides verbose colored terminal output using `chalk`
-- For each detection, displays:
+- For each detection or hunt, displays:
+  - Type label (detection or hunt)
   - Title and description
   - MITRE ATT&CK tactics/techniques
   - The exact Okta filter query
   - Results with event details (time, actor, IP, outcome)
   - Analysis and interpretation
   - False positive notes
-- Generates summary statistics
+- Generates summary statistics and PDF reports
 
 ### Detection File Structure
 
@@ -156,12 +159,13 @@ eventType eq "user.session.access_admin_app" AND outcome.result eq "FAILURE"
 - 200ms delay between different detections
 - Prevents overwhelming Okta API
 
-### Dynamic Detection Loading
-- App fetches latest detection rules from GitHub on every run by default
-- Ensures new detections are automatically included as they're added upstream
-- Detection files cached in `detections/` directory as backup
+### Dynamic Detection and Hunt Loading
+- App fetches latest detection rules and threat hunts from GitHub on every run by default
+- Loads from both `/detections` and `/hunts` directories in the upstream repository
+- Ensures new detections and hunts are automatically included as they're added upstream
+- All files cached in `detections/` directory as backup
 - Falls back to cache if GitHub is unavailable (network issues, rate limits)
-- Use `--offline` flag to skip GitHub fetch and use cached detections only
+- Use `--offline` flag to skip GitHub fetch and use cached rules only
 
 ### Verbose Output Philosophy
 - Every detection shows what it's looking for
@@ -170,9 +174,11 @@ eventType eq "user.session.access_admin_app" AND outcome.result eq "FAILURE"
 - Analysis helps interpret findings
 - False positive notes aid investigation
 
-## Detection Categories
+## Detection and Hunt Categories
 
-The 31 detection rules cover:
+The 31+ detection rules and 12+ threat hunts cover:
+
+### Detections (Real-time security events)
 1. **Access Control** - Admin console access denied, weak MFA
 2. **Authentication** - Policy downgrades, suspicious MFA abandonment
 3. **Persistence** - New API tokens, new admins
@@ -182,10 +188,24 @@ The 31 detection rules cover:
 7. **Collection** - OAuth client secret reads
 8. **Impact** - Protected action changes
 
+### Hunts (Proactive threat hunting queries)
+1. **AD User Imports** - Suspicious Active Directory user imports
+2. **API Activity** - Unusual API usage patterns
+3. **App Password Reveals** - Application password exposure events
+4. **Authentication Policy Denies** - Denied authentication attempts
+5. **Cloud Infrastructure Access** - Cloud resource access patterns
+6. **Failed Identity Verification** - Identity verification failures
+7. **Failed Number Challenges** - Phone number challenge failures
+8. **MFA Abandonment** - Abandoned multi-factor authentication
+9. **Factor Resets** - MFA factor reset events
+10. **Rejected MFA Pushes** - Rejected push notification attempts
+11. **Rich Client Abuse** - Native/rich client authentication abuse
+12. **Sign-ins from Proxies** - Authentication from proxy/VPN services
+
 ## Common Development Tasks
 
-### Adding New Detection Sources
-Modify `detectionLoader.js` to support additional GitHub repositories or local YAML files.
+### Adding New Detection/Hunt Sources
+Modify `detectionLoader.js` `sources` array to support additional GitHub directories, repositories, or local YAML files. Each source requires a `name`, `githubBaseUrl`, `rawBaseUrl`, and `type` field.
 
 ### Supporting New Query Types
 Currently only OIE format is executable. To support Splunk/Datadog queries, implement translation logic in `detectionRunner.js`.
@@ -210,8 +230,8 @@ Extend `detectionRunner.js` to write results to JSON/CSV files for further analy
 
 **"401 Unauthorized"**: Verify API token has `okta.logs.read` scope
 
-**"No events found"**: Normal if no security events match detection. Try wider time range with `--since`.
+**"No events found"**: Normal if no security events match the detection or hunt. Try wider time range with `--since`.
 
 **"Rate limit exceeded"**: Okta API has rate limits. The app includes delays, but you may need to wait before retrying.
 
-**Detection shows "Skipped (Splunk)"**: This detection uses SIEM-specific queries and cannot be directly executed via Okta API.
+**Detection/Hunt shows "Skipped (Splunk)"**: This rule uses SIEM-specific queries and cannot be directly executed via Okta API.
