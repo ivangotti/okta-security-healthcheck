@@ -1,9 +1,11 @@
 const chalk = require('chalk');
+const PDFGenerator = require('./pdfGenerator');
 
 class DetectionRunner {
   constructor(oktaClient, config) {
     this.oktaClient = oktaClient;
     this.config = config;
+    this.pdfGenerator = new PDFGenerator();
   }
 
   async runAllDetections(detections) {
@@ -20,36 +22,57 @@ class DetectionRunner {
       failed: 0,
       withFindings: 0,
       totalFindings: 0,
-      findings: []
+      detectionResults: []
     };
 
     for (let i = 0; i < executable.length; i++) {
       const detection = executable[i];
       try {
-        const findingCount = await this.runDetection(detection, i + 1, executable.length);
+        const detectionResult = await this.runDetectionWithEvents(detection, i + 1, executable.length);
         results.success++;
-        if (findingCount > 0) {
+
+        results.detectionResults.push(detectionResult);
+
+        if (detectionResult.events.length > 0) {
           results.withFindings++;
-          results.totalFindings += findingCount;
-          results.findings.push({
-            title: detection.title,
-            count: findingCount,
-            threat: detection.threat
-          });
+          results.totalFindings += detectionResult.events.length;
         }
       } catch (error) {
         results.failed++;
         console.log(chalk.red(`Error: ${error.message}\n`));
+
+        // Still add to results even if failed
+        results.detectionResults.push({
+          title: detection.title,
+          description: detection.description,
+          threat: detection.threat,
+          false_positives: detection.false_positives,
+          events: [],
+          error: error.message
+        });
       }
 
       // Small delay between detections
       await this.sleep(200);
     }
 
+    // Generate PDF report
+    console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
+    console.log(chalk.cyan('Generating PDF report...'));
+
+    try {
+      const pdfPath = await this.pdfGenerator.generateReport(results, this.config);
+      console.log(chalk.green(`✓ PDF report generated: ${pdfPath}`));
+    } catch (error) {
+      console.log(chalk.red(`✗ Failed to generate PDF: ${error.message}`));
+    }
+
+    console.log(chalk.bold.cyan('='.repeat(80) + '\n'));
+
     return results;
   }
 
-  async runDetection(detection, index, total) {
+  async runDetectionWithEvents(detection, index, total) {
     console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
     console.log(chalk.bold.cyan(`[${index}/${total}] ${detection.title}`));
     console.log(chalk.bold.cyan('='.repeat(80)));
@@ -106,7 +129,19 @@ class DetectionRunner {
 
     console.log(chalk.cyan('='.repeat(80)));
 
-    return events.length;
+    // Return detection result with events
+    return {
+      title: detection.title,
+      description: detection.description,
+      threat: detection.threat,
+      false_positives: detection.false_positives,
+      events: events
+    };
+  }
+
+  async runDetection(detection, index, total) {
+    const result = await this.runDetectionWithEvents(detection, index, total);
+    return result.events.length;
   }
 
   displayEvent(event, index) {
