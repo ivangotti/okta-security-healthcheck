@@ -10,10 +10,11 @@ A powerful Node.js application that executes security detection rules against yo
 
 - **22+ Security Detections** - Automatically executes OIE-compatible detection rules
 - **Dynamic Updates** - Fetches latest detection rules from GitHub on every run
+- **PDF Report Generation** - Beautiful, professional PDF reports with all findings automatically generated
 - **Verbose Output** - Color-coded terminal output with detailed event information
 - **Smart Caching** - Falls back to cached detections if GitHub is unavailable
 - **Offline Mode** - Run scans using cached detection rules
-- **Comprehensive Summary** - Clear security findings report with MITRE ATT&CK tactics
+- **Risk Assessment** - Automatic risk level calculation (LOW/MODERATE/HIGH)
 
 ## 🎯 What It Detects
 
@@ -190,6 +191,46 @@ Total Events: 159
 - **MITRE ATT&CK tactics** for threat context
 - **False positive guidance** to reduce alert fatigue
 
+## 📄 PDF Report
+
+After each scan completes, a beautiful PDF report is automatically generated with the filename: `okta-security-scan-YYYY-MM-DD.pdf`
+
+### Report Contents
+
+**Title Page**
+- Scan date and time
+- Okta tenant information
+- Query period
+
+**Executive Summary**
+- Key metrics (detections executed, triggered, total events)
+- Risk assessment (LOW/MODERATE/HIGH) with color coding
+- Summary of key findings
+
+**Detailed Findings**
+- Each detection with findings gets a dedicated section
+- Detection description and MITRE ATT&CK tactics
+- Event details including:
+  - Timestamp
+  - Actor (user/service)
+  - IP address and geolocation
+  - Outcome (SUCCESS/FAILURE/DENY)
+  - Target resources
+- False positive guidance
+
+**Professional Formatting**
+- Clean typography with Helvetica fonts
+- Color-coded risk indicators
+- Statistics boxes with visual appeal
+- Page headers and footers with page numbers
+- Organized sections for easy navigation
+
+The PDF is perfect for:
+- Sharing with security teams
+- Compliance documentation
+- Executive reporting
+- Historical tracking of security posture
+
 ## 🏗️ Architecture
 
 ```
@@ -198,7 +239,8 @@ sec-healthcheck/
 │   ├── index.js            # Main entry point & CLI
 │   ├── oktaClient.js       # Okta API wrapper
 │   ├── detectionLoader.js  # GitHub detection fetcher
-│   └── detectionRunner.js  # Detection executor
+│   ├── detectionRunner.js  # Detection executor
+│   └── pdfGenerator.js     # PDF report generator
 ├── config.json.example     # Configuration template
 ├── package.json           # Dependencies
 ├── README.md             # This file
@@ -211,7 +253,8 @@ sec-healthcheck/
 2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats)
 3. **Okta Client** executes each query against your tenant's System Log API
 4. **Runner** displays results with comprehensive context and analysis
-5. **Smart Caching** saves detections locally as backup
+5. **PDF Generator** creates a beautiful report with all findings
+6. **Smart Caching** saves detections locally as backup
 
 ## 🔒 Security Considerations
 
