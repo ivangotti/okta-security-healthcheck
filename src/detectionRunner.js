@@ -87,11 +87,27 @@ class DetectionRunner {
     // Execute query
     console.log(chalk.white('\nExecuting query...'));
 
-    const events = await this.oktaClient.querySystemLog(
-      detection.query,
-      this.config.query?.since,
-      this.config.query?.limit || 100
-    );
+    let events = [];
+    try {
+      events = await this.oktaClient.querySystemLog(
+        detection.query,
+        this.config.query?.since,
+        this.config.query?.limit || 100
+      );
+    } catch (error) {
+      console.log(chalk.red(`Error: ${error.message}`));
+      console.log(chalk.yellow('⊘ Skipping this detection due to query error\n'));
+
+      // Return empty result for this detection
+      return {
+        title: detection.title,
+        description: detection.description,
+        threat: detection.threat,
+        false_positives: detection.false_positives,
+        events: [],
+        error: error.message
+      };
+    }
 
     console.log(chalk.bold.white(`\nResults: ${events.length} event(s) found`));
 

@@ -114,14 +114,17 @@ class PDFGenerator {
 
     doc.moveDown(1.5);
 
-    // Calculate statistics
-    const totalDetections = findings.detectionResults.length;
-    const detectionsWithFindings = findings.detectionResults.filter(d => d.events.length > 0).length;
-    const totalEvents = findings.detectionResults.reduce((sum, d) => sum + d.events.length, 0);
+    // Calculate statistics - ensure we have valid data
+    const detectionResults = findings.detectionResults || [];
+    const totalDetections = detectionResults.length || 0;
+    const detectionsWithFindings = detectionResults.filter(d => d.events && d.events.length > 0).length || 0;
+    const totalEvents = detectionResults.reduce((sum, d) => sum + (d.events ? d.events.length : 0), 0) || 0;
 
     // Summary boxes
     const boxY = doc.y;
-    const boxWidth = (doc.page.width - (this.pageMargin * 2) - 20) / 3;
+    const pageWidth = doc.page.width || 595; // A4 width default
+    const pageMargin = this.pageMargin || 50;
+    const boxWidth = (pageWidth - (pageMargin * 2) - 20) / 3;
     const boxHeight = 80;
 
     // Box 1 - Total Detections
@@ -182,9 +185,9 @@ class PDFGenerator {
 
       doc.moveDown(0.5);
 
-      const findingsWithEvents = findings.detectionResults
-        .filter(d => d.events.length > 0)
-        .sort((a, b) => b.events.length - a.events.length);
+      const findingsWithEvents = detectionResults
+        .filter(d => d.events && d.events.length > 0)
+        .sort((a, b) => (b.events?.length || 0) - (a.events?.length || 0));
 
       findingsWithEvents.forEach((finding, index) => {
         if (index > 0) doc.moveDown(0.3);
@@ -202,25 +205,32 @@ class PDFGenerator {
   }
 
   drawSummaryBox(doc, x, y, width, height, value, label, color) {
+    // Ensure all values are valid numbers
+    const validX = Number(x) || 0;
+    const validY = Number(y) || 0;
+    const validWidth = Number(width) || 100;
+    const validHeight = Number(height) || 80;
+
     // Draw box
-    doc.roundedRect(x, y, width, height, 5)
+    doc.roundedRect(validX, validY, validWidth, validHeight, 5)
        .fillAndStroke('#FAFAFA', '#E0E0E0');
 
     // Draw value
     doc.fontSize(28)
        .fillColor(color)
        .font('Helvetica-Bold')
-       .text(value, x, y + 20, { width: width, align: 'center' });
+       .text(value || '0', validX, validY + 20, { width: validWidth, align: 'center' });
 
     // Draw label
     doc.fontSize(10)
        .fillColor('#666')
        .font('Helvetica')
-       .text(label, x, y + 55, { width: width, align: 'center' });
+       .text(label, validX, validY + 55, { width: validWidth, align: 'center' });
   }
 
   addFindingsDetail(doc, findings) {
-    const findingsWithEvents = findings.detectionResults.filter(d => d.events.length > 0);
+    const detectionResults = findings.detectionResults || [];
+    const findingsWithEvents = detectionResults.filter(d => d.events && d.events.length > 0);
 
     if (findingsWithEvents.length === 0) {
       doc.addPage();

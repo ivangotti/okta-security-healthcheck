@@ -3,4 +3,5 @@ config.json
 .env
 detections/
 *.log
+*.pdf
 .DS_Store
