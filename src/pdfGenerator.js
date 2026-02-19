@@ -15,13 +15,21 @@ class PDFGenerator {
 
     return new Promise((resolve, reject) => {
       try {
+        // Validate findings structure
+        if (!findings || typeof findings !== 'object') {
+          throw new Error('Invalid findings object');
+        }
+        if (!Array.isArray(findings.detectionResults)) {
+          findings.detectionResults = [];
+        }
+
         const doc = new PDFDocument({
           size: 'A4',
           margins: {
-            top: this.pageMargin,
-            bottom: this.pageMargin,
-            left: this.pageMargin,
-            right: this.pageMargin
+            top: 50,
+            bottom: 50,
+            left: 50,
+            right: 50
           }
         });
 
@@ -32,7 +40,6 @@ class PDFGenerator {
         this.addTitlePage(doc, timestamp, config);
         this.addExecutiveSummary(doc, findings);
         this.addFindingsDetail(doc, findings);
-        this.addFooter(doc);
 
         doc.end();
 
@@ -66,41 +73,41 @@ class PDFGenerator {
 
     doc.moveDown(3);
 
-    // Scan details box
-    const boxTop = doc.y;
-    doc.roundedRect(this.pageMargin, boxTop, doc.page.width - (this.pageMargin * 2), 120, 5)
-       .fillAndStroke('#F5F5F5', '#E0E0E0');
-
-    doc.fillColor('#333')
-       .fontSize(12)
+    // Scan details
+    doc.fontSize(12)
+       .fillColor('#333')
        .font('Helvetica-Bold')
-       .text('Scan Date:', this.pageMargin + 20, boxTop + 20);
+       .text('Scan Date:');
 
-    doc.font('Helvetica')
-       .text(timestamp.toLocaleString('en-US', {
-         dateStyle: 'full',
-         timeStyle: 'long'
-       }), this.pageMargin + 120, boxTop + 20);
+    doc.fontSize(11)
+       .font('Helvetica')
+       .fillColor('#666')
+       .text(timestamp.toLocaleString(), { indent: 20 });
 
-    doc.font('Helvetica-Bold')
-       .text('Okta Tenant:', this.pageMargin + 20, boxTop + 50);
+    doc.moveDown(0.5);
 
-    doc.font('Helvetica')
-       .text(config.okta.domain, this.pageMargin + 120, boxTop + 50);
+    doc.fontSize(12)
+       .fillColor('#333')
+       .font('Helvetica-Bold')
+       .text('Okta Tenant:');
 
-    doc.font('Helvetica-Bold')
-       .text('Query Period:', this.pageMargin + 20, boxTop + 80);
+    doc.fontSize(11)
+       .font('Helvetica')
+       .fillColor('#666')
+       .text(config.okta?.domain || 'Unknown', { indent: 20 });
+
+    doc.moveDown(0.5);
+
+    doc.fontSize(12)
+       .fillColor('#333')
+       .font('Helvetica-Bold')
+       .text('Query Period:');
 
     const since = config.query?.since || 'Last 90 days';
-    doc.font('Helvetica')
-       .text(since, this.pageMargin + 120, boxTop + 80);
-
-    doc.moveDown(4);
-
-    // Add a separator line
-    doc.moveTo(this.pageMargin, doc.y)
-       .lineTo(doc.page.width - this.pageMargin, doc.y)
-       .stroke('#E0E0E0');
+    doc.fontSize(11)
+       .font('Helvetica')
+       .fillColor('#666')
+       .text(since, { indent: 20 });
   }
 
   addExecutiveSummary(doc, findings) {
@@ -110,73 +117,69 @@ class PDFGenerator {
     doc.fontSize(24)
        .fillColor('#1976D2')
        .font('Helvetica-Bold')
-       .text('Executive Summary', { underline: false });
+       .text('Executive Summary');
 
     doc.moveDown(1.5);
 
-    // Calculate statistics - ensure we have valid data
+    // Calculate statistics
     const detectionResults = findings.detectionResults || [];
-    const totalDetections = detectionResults.length || 0;
-    const detectionsWithFindings = detectionResults.filter(d => d.events && d.events.length > 0).length || 0;
-    const totalEvents = detectionResults.reduce((sum, d) => sum + (d.events ? d.events.length : 0), 0) || 0;
+    const totalDetections = detectionResults.length;
+    const detectionsWithFindings = detectionResults.filter(d => d.events && d.events.length > 0).length;
+    const totalEvents = detectionResults.reduce((sum, d) => sum + (d.events ? d.events.length : 0), 0);
 
-    // Summary boxes
-    const boxY = doc.y;
-    const pageWidth = doc.page.width || 595; // A4 width default
-    const pageMargin = this.pageMargin || 50;
-    const boxWidth = (pageWidth - (pageMargin * 2) - 20) / 3;
-    const boxHeight = 80;
-
-    // Box 1 - Total Detections
-    this.drawSummaryBox(doc, this.pageMargin, boxY, boxWidth, boxHeight,
-                        totalDetections.toString(), 'Detections Executed', '#4CAF50');
-
-    // Box 2 - Findings
-    this.drawSummaryBox(doc, this.pageMargin + boxWidth + 10, boxY, boxWidth, boxHeight,
-                        detectionsWithFindings.toString(), 'Detections Triggered', '#FF9800');
-
-    // Box 3 - Total Events
-    this.drawSummaryBox(doc, this.pageMargin + (boxWidth * 2) + 20, boxY, boxWidth, boxHeight,
-                        totalEvents.toString(), 'Total Events', '#F44336');
-
-    doc.y = boxY + boxHeight + 30;
-
-    // Risk level assessment
+    // Statistics
     doc.fontSize(14)
        .fillColor('#333')
        .font('Helvetica-Bold')
-       .text('Risk Assessment:', this.pageMargin);
+       .text('Scan Results:');
 
     doc.moveDown(0.5);
 
+    doc.fontSize(11)
+       .fillColor('#666')
+       .font('Helvetica')
+       .text(`• Total Detections Executed: ${totalDetections}`)
+       .text(`• Detections Triggered: ${detectionsWithFindings}`)
+       .text(`• Total Events Found: ${totalEvents}`);
+
+    doc.moveDown(1.5);
+
+    // Risk level
     let riskLevel, riskColor, riskText;
     if (detectionsWithFindings === 0) {
-      riskLevel = 'LOW';
+      riskLevel = 'LOW RISK';
       riskColor = '#4CAF50';
       riskText = 'No security threats detected. Your Okta environment appears secure.';
     } else if (detectionsWithFindings <= 3) {
-      riskLevel = 'MODERATE';
+      riskLevel = 'MODERATE RISK';
       riskColor = '#FF9800';
       riskText = 'Some security events detected. Review findings to ensure they are legitimate.';
     } else {
-      riskLevel = 'HIGH';
+      riskLevel = 'HIGH RISK';
       riskColor = '#F44336';
       riskText = 'Multiple security threats detected. Immediate review recommended.';
     }
 
-    doc.fontSize(20)
+    doc.fontSize(14)
+       .fillColor('#333')
+       .font('Helvetica-Bold')
+       .text('Risk Assessment:');
+
+    doc.moveDown(0.5);
+
+    doc.fontSize(18)
        .fillColor(riskColor)
        .font('Helvetica-Bold')
-       .text(riskLevel, { continued: false });
+       .text(riskLevel);
 
-    doc.fontSize(12)
-       .fillColor('#555')
+    doc.fontSize(11)
+       .fillColor('#666')
        .font('Helvetica')
-       .text(riskText, { continued: false });
+       .text(riskText);
 
     doc.moveDown(2);
 
-    // Key findings summary
+    // Key findings
     if (detectionsWithFindings > 0) {
       doc.fontSize(14)
          .fillColor('#333')
@@ -187,45 +190,20 @@ class PDFGenerator {
 
       const findingsWithEvents = detectionResults
         .filter(d => d.events && d.events.length > 0)
-        .sort((a, b) => (b.events?.length || 0) - (a.events?.length || 0));
+        .sort((a, b) => b.events.length - a.events.length);
 
-      findingsWithEvents.forEach((finding, index) => {
-        if (index > 0) doc.moveDown(0.3);
-
+      findingsWithEvents.forEach((finding) => {
         doc.fontSize(11)
            .fillColor('#1976D2')
            .font('Helvetica-Bold')
-           .text(`• ${finding.title}`, { indent: 20, continued: true });
+           .text(`• ${finding.title}`, { indent: 20 });
 
-        doc.fillColor('#666')
+        doc.fontSize(10)
+           .fillColor('#666')
            .font('Helvetica')
-           .text(` - ${finding.events.length} event(s)`, { continued: false });
+           .text(`${finding.events.length} event(s) found`, { indent: 30 });
       });
     }
-  }
-
-  drawSummaryBox(doc, x, y, width, height, value, label, color) {
-    // Ensure all values are valid numbers
-    const validX = Number(x) || 0;
-    const validY = Number(y) || 0;
-    const validWidth = Number(width) || 100;
-    const validHeight = Number(height) || 80;
-
-    // Draw box
-    doc.roundedRect(validX, validY, validWidth, validHeight, 5)
-       .fillAndStroke('#FAFAFA', '#E0E0E0');
-
-    // Draw value
-    doc.fontSize(28)
-       .fillColor(color)
-       .font('Helvetica-Bold')
-       .text(value || '0', validX, validY + 20, { width: validWidth, align: 'center' });
-
-    // Draw label
-    doc.fontSize(10)
-       .fillColor('#666')
-       .font('Helvetica')
-       .text(label, validX, validY + 55, { width: validWidth, align: 'center' });
   }
 
   addFindingsDetail(doc, findings) {
@@ -237,7 +215,7 @@ class PDFGenerator {
       doc.fontSize(18)
          .fillColor('#4CAF50')
          .font('Helvetica-Bold')
-         .text('✓ No Security Findings', { align: 'center' });
+         .text('No Security Findings', { align: 'center' });
 
       doc.moveDown(1);
       doc.fontSize(12)
@@ -270,7 +248,7 @@ class PDFGenerator {
       }
 
       // Threat information
-      if (finding.threat) {
+      if (finding.threat && finding.threat.Tactic) {
         const tactics = Array.isArray(finding.threat.Tactic)
           ? finding.threat.Tactic.join(', ')
           : finding.threat.Tactic;
@@ -278,96 +256,62 @@ class PDFGenerator {
         doc.fontSize(10)
            .fillColor('#333')
            .font('Helvetica-Bold')
-           .text('MITRE ATT&CK Tactic: ', { continued: true });
-
-        doc.font('Helvetica')
-           .fillColor('#666')
-           .text(tactics || 'N/A');
+           .text(`MITRE ATT&CK Tactic: ${tactics}`);
 
         doc.moveDown(1);
       }
 
-      // Event count badge
-      doc.fontSize(10)
+      // Event count
+      doc.fontSize(11)
          .fillColor('#333')
          .font('Helvetica-Bold')
-         .text('Events Found: ', { continued: true });
+         .text(`Events Found: ${finding.events.length}`);
 
-      doc.fillColor('#F44336')
-         .text(finding.events.length.toString());
+      doc.moveDown(1);
 
-      doc.moveDown(1.5);
+      // Events header
+      doc.fontSize(12)
+         .fillColor('#1976D2')
+         .font('Helvetica-Bold')
+         .text('Event Details:');
 
-      // Events table header
-      doc.fontSize(11)
-         .fillColor('#FFF')
-         .font('Helvetica-Bold');
-
-      const tableTop = doc.y;
-      doc.rect(this.pageMargin, tableTop, doc.page.width - (this.pageMargin * 2), 25)
-         .fill('#1976D2');
-
-      doc.text('Event Details', this.pageMargin + 10, tableTop + 7);
-
-      doc.y = tableTop + 30;
+      doc.moveDown(0.5);
 
       // Display events (limit to first 10)
       const eventsToShow = finding.events.slice(0, 10);
       eventsToShow.forEach((event, eventIndex) => {
         // Check if we need a new page
-        if (doc.y > doc.page.height - 150) {
+        if (doc.y > 700) {
           doc.addPage();
         }
 
-        const eventY = doc.y;
-
-        // Event box
-        doc.roundedRect(this.pageMargin, eventY, doc.page.width - (this.pageMargin * 2), 'auto', 3)
-           .stroke('#E0E0E0');
-
-        doc.fontSize(9)
+        doc.fontSize(10)
            .fillColor('#333')
            .font('Helvetica-Bold')
-           .text(`Event ${eventIndex + 1}`, this.pageMargin + 10, eventY + 10);
-
-        doc.moveDown(0.3);
-
-        // Event details
-        const leftColumn = this.pageMargin + 10;
-        const rightColumn = this.pageMargin + 300;
-        let currentY = doc.y;
+           .text(`Event ${eventIndex + 1}:`);
 
         doc.fontSize(9)
            .fillColor('#666')
            .font('Helvetica');
 
         // Time
-        doc.text('Time:', leftColumn, currentY, { continued: true });
-        doc.font('Helvetica-Bold')
-           .fillColor('#333')
-           .text(` ${new Date(event.published).toLocaleString()}`, { continued: false });
-        currentY += 12;
+        if (event.published) {
+          doc.text(`  Time: ${new Date(event.published).toLocaleString()}`);
+        }
+
+        // Event Type
+        if (event.eventType) {
+          doc.text(`  Event Type: ${event.eventType}`);
+        }
 
         // Actor
         if (event.actor?.alternateId) {
-          doc.font('Helvetica')
-             .fillColor('#666')
-             .text('Actor:', leftColumn, currentY, { continued: true });
-          doc.font('Helvetica-Bold')
-             .fillColor('#333')
-             .text(` ${event.actor.alternateId}`, { continued: false });
-          currentY += 12;
+          doc.text(`  Actor: ${event.actor.alternateId}`);
         }
 
         // IP Address
         if (event.client?.ipAddress) {
-          doc.font('Helvetica')
-             .fillColor('#666')
-             .text('IP Address:', leftColumn, currentY, { continued: true });
-          doc.font('Helvetica-Bold')
-             .fillColor('#333')
-             .text(` ${event.client.ipAddress}`, { continued: false });
-          currentY += 12;
+          doc.text(`  IP Address: ${event.client.ipAddress}`);
         }
 
         // Location
@@ -375,31 +319,18 @@ class PDFGenerator {
           const geo = event.client.geographicalContext;
           const location = [geo.city, geo.state, geo.country].filter(Boolean).join(', ');
           if (location) {
-            doc.font('Helvetica')
-               .fillColor('#666')
-               .text('Location:', leftColumn, currentY, { continued: true });
-            doc.font('Helvetica-Bold')
-               .fillColor('#333')
-               .text(` ${location}`, { continued: false });
-            currentY += 12;
+            doc.text(`  Location: ${location}`);
           }
         }
 
         // Outcome
         if (event.outcome) {
-          doc.font('Helvetica')
-             .fillColor('#666')
-             .text('Outcome:', leftColumn, currentY, { continued: true });
-
-          const outcomeColor = event.outcome.result === 'SUCCESS' ? '#4CAF50' :
-                               event.outcome.result === 'FAILURE' ? '#F44336' : '#666';
-          doc.font('Helvetica-Bold')
-             .fillColor(outcomeColor)
-             .text(` ${event.outcome.result}`, { continued: false });
-          currentY += 12;
+          doc.text(`  Outcome: ${event.outcome.result}`);
+          if (event.outcome.reason) {
+            doc.text(`  Reason: ${event.outcome.reason}`);
+          }
         }
 
-        doc.y = currentY + 10;
         doc.moveDown(0.5);
       });
 
@@ -407,7 +338,7 @@ class PDFGenerator {
         doc.fontSize(9)
            .fillColor('#999')
            .font('Helvetica-Oblique')
-           .text(`... and ${finding.events.length - 10} more event(s)`, { align: 'center' });
+           .text(`... and ${finding.events.length - 10} more event(s)`);
       }
 
       // False positives
@@ -423,41 +354,23 @@ class PDFGenerator {
            .font('Helvetica');
 
         finding.false_positives.forEach(fp => {
-          doc.text(`• ${fp}`, { indent: 15 });
+          doc.text(`  • ${fp}`);
         });
       }
     });
-  }
 
-  addFooter(doc) {
-    const pages = doc.bufferedPageRange();
+    // Footer
+    doc.addPage();
+    doc.fontSize(12)
+       .fillColor('#666')
+       .font('Helvetica')
+       .text('End of Report', { align: 'center' });
 
-    for (let i = 0; i < pages.count; i++) {
-      doc.switchToPage(i);
+    doc.moveDown(1);
 
-      // Footer line
-      doc.moveTo(this.pageMargin, doc.page.height - 40)
-         .lineTo(doc.page.width - this.pageMargin, doc.page.height - 40)
-         .stroke('#E0E0E0');
-
-      // Footer text
-      doc.fontSize(8)
-         .fillColor('#999')
-         .font('Helvetica')
-         .text(
-           'Generated by Okta Security Health Check',
-           this.pageMargin,
-           doc.page.height - 30,
-           { align: 'left' }
-         );
-
-      doc.text(
-        `Page ${i + 1} of ${pages.count}`,
-        this.pageMargin,
-        doc.page.height - 30,
-        { align: 'right' }
-      );
-    }
+    doc.fontSize(9)
+       .fillColor('#999')
+       .text(`Generated by Okta Security Health Check on ${new Date().toLocaleString()}`, { align: 'center' });
   }
 }
 
