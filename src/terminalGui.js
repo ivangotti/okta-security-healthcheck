@@ -33,14 +33,22 @@ class TerminalGui {
       top: 0,
       left: 0,
       width: '100%',
-      height: 5,
+      height: 4,
       tags: true,
-      border: {
-        type: 'line',
-        fg: 'cyan'
-      },
       style: {
         fg: 'white'
+      }
+    });
+
+    // Create divider line between header and content
+    this.divider = blessed.line({
+      top: 4,
+      left: 0,
+      width: '100%',
+      orientation: 'horizontal',
+      type: 'line',
+      style: {
+        fg: 'cyan'
       }
     });
 
@@ -63,10 +71,6 @@ class TerminalGui {
       width: '100%',
       height: '100%-5',
       tags: true,
-      border: {
-        type: 'line',
-        fg: 'cyan'
-      },
       scrollable: true,
       alwaysScroll: true,
       scrollbar: {
@@ -83,6 +87,7 @@ class TerminalGui {
 
     // Add all components to screen
     this.screen.append(this.header);
+    this.screen.append(this.divider);
     this.screen.append(this.mascotBox);
     this.screen.append(this.logBox);
 
