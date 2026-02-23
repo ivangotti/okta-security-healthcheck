@@ -25,7 +25,6 @@ class TerminalGui {
     this.screen = blessed.screen({
       smartCSR: true,
       fullUnicode: true,
-      dockBorders: true,
       title: 'Okta Security Healthcheck'
     });
 
@@ -37,13 +36,11 @@ class TerminalGui {
       height: 5,
       tags: true,
       border: {
-        type: 'line'
+        type: 'line',
+        fg: 'cyan'
       },
       style: {
-        fg: 'white',
-        border: {
-          fg: 'cyan'
-        }
+        fg: 'white'
       }
     });
 
@@ -67,24 +64,20 @@ class TerminalGui {
       height: '100%-5',
       tags: true,
       border: {
-        type: 'line'
+        type: 'line',
+        fg: 'cyan'
       },
       scrollable: true,
       alwaysScroll: true,
       scrollbar: {
         ch: '█',
-        style: {
-          fg: 'cyan'
-        }
+        fg: 'cyan'
       },
       mouse: true,
       keys: true,
       vi: true,
       style: {
-        fg: 'white',
-        border: {
-          fg: 'cyan'
-        }
+        fg: 'white'
       }
     });
 
