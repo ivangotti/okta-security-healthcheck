@@ -53,6 +53,7 @@ class SecurityHealthCheck {
   }
 
   async initialize() {
+    gui.clear();
     gui.section('Initializing Okta Security Health Check');
 
     gui.success('Configuration loaded');

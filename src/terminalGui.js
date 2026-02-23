@@ -64,8 +64,8 @@ class TerminalGui {
       }
     });
 
-    // Create scrolling log box
-    this.logBox = blessed.log({
+    // Create content box (updates in place, no scrolling)
+    this.logBox = blessed.box({
       top: 5,
       left: 0,
       width: '100%',
@@ -84,6 +84,9 @@ class TerminalGui {
         fg: 'white'
       }
     });
+
+    // Content buffer for current display
+    this.contentBuffer = [];
 
     // Add all components to screen
     this.screen.append(this.header);
@@ -181,7 +184,23 @@ class TerminalGui {
     // Strip chalk colors and convert to blessed tags
     let formattedMessage = this.convertChalkToBlessedTags(message);
 
-    this.logBox.log(formattedMessage);
+    // Add to buffer
+    this.contentBuffer.push(formattedMessage);
+
+    // Update display
+    this.updateDisplay();
+  }
+
+  clear() {
+    this.contentBuffer = [];
+    this.updateDisplay();
+  }
+
+  updateDisplay() {
+    if (!this.isInitialized) return;
+
+    // Join all buffered content and set it
+    this.logBox.setContent(this.contentBuffer.join('\n'));
     this.screen.render();
   }
 

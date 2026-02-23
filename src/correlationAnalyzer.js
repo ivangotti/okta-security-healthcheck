@@ -14,6 +14,9 @@ class CorrelationAnalyzer {
    * @returns {Object} Correlation analysis results
    */
   analyzeFindings(detectionResults) {
+    // Clear for correlation analysis
+    gui.clear();
+
     gui.section('Performing Correlation Analysis');
     gui.log('{gray-fg}🔬 Analyzing events to identify patterns and risk indicators...{/gray-fg}\n');
 

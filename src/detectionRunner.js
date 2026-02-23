@@ -16,8 +16,12 @@ class DetectionRunner {
     const detectionCount = executable.filter(d => d.sourceType === 'detection').length;
     const huntCount = executable.filter(d => d.sourceType === 'hunt').length;
 
+    gui.clear();
     gui.section('Okta Security Detection Scanner');
     gui.log(`{green-fg}🚀 Running ${executable.length} security checks (${detectionCount} detections, ${huntCount} hunts)...{/green-fg}\n`);
+
+    // Give user time to see the start message
+    await this.sleep(1000);
 
     const results = {
       total: executable.length,
@@ -64,6 +68,7 @@ class DetectionRunner {
     results.correlationAnalysis = correlationAnalysis;
 
     // Generate PDF report
+    gui.clear();
     gui.section('Generating PDF Report');
     gui.progress('Creating PDF document');
 
@@ -78,6 +83,9 @@ class DetectionRunner {
   }
 
   async runDetectionWithEvents(detection, index, total) {
+    // Clear screen for new detection
+    gui.clear();
+
     gui.detection(index, total, detection.title, detection.sourceType);
 
     // Description
