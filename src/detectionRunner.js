@@ -1,6 +1,7 @@
 const chalk = require('chalk');
 const PDFGenerator = require('./pdfGenerator');
 const CorrelationAnalyzer = require('./correlationAnalyzer');
+const gui = require('./terminalGui');
 
 class DetectionRunner {
   constructor(oktaClient, config) {
@@ -15,10 +16,8 @@ class DetectionRunner {
     const detectionCount = executable.filter(d => d.sourceType === 'detection').length;
     const huntCount = executable.filter(d => d.sourceType === 'hunt').length;
 
-    console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
-    console.log(chalk.bold.cyan('Okta Security Detection Scanner'));
-    console.log(chalk.bold.cyan('='.repeat(80)));
-    console.log(chalk.green(`Running ${executable.length} security checks (${detectionCount} detections, ${huntCount} hunts)...\n`));
+    gui.section('Okta Security Detection Scanner');
+    gui.log(`{green-fg}🚀 Running ${executable.length} security checks (${detectionCount} detections, ${huntCount} hunts)...{/green-fg}\n`);
 
     const results = {
       total: executable.length,
@@ -43,7 +42,7 @@ class DetectionRunner {
         }
       } catch (error) {
         results.failed++;
-        console.log(chalk.red(`Error: ${error.message}\n`));
+        gui.error(`Error: ${error.message}\n`);
 
         // Still add to results even if failed
         results.detectionResults.push({
@@ -65,38 +64,31 @@ class DetectionRunner {
     results.correlationAnalysis = correlationAnalysis;
 
     // Generate PDF report
-    console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
-    console.log(chalk.cyan('Generating PDF report...'));
+    gui.section('Generating PDF Report');
+    gui.progress('Creating PDF document');
 
     try {
       const pdfPath = await this.pdfGenerator.generateReport(results, this.config);
-      console.log(chalk.green(`✓ PDF report generated: ${pdfPath}`));
+      gui.success(`PDF report generated: ${pdfPath}`);
     } catch (error) {
-      console.log(chalk.red(`✗ Failed to generate PDF: ${error.message}`));
+      gui.error(`Failed to generate PDF: ${error.message}`);
     }
-
-    console.log(chalk.bold.cyan('='.repeat(80) + '\n'));
 
     return results;
   }
 
   async runDetectionWithEvents(detection, index, total) {
-    const typeLabel = detection.sourceType === 'hunt' ? '[HUNT]' : '[DETECTION]';
-    const typeColor = detection.sourceType === 'hunt' ? chalk.magenta : chalk.cyan;
-
-    console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
-    console.log(chalk.bold.cyan(`[${index}/${total}] `) + typeColor.bold(typeLabel) + chalk.bold.cyan(` ${detection.title}`));
-    console.log(chalk.bold.cyan('='.repeat(80)));
+    gui.detection(index, total, detection.title, detection.sourceType);
 
     // Description
     if (detection.description) {
-      console.log(chalk.white('\nDescription:'));
+      gui.log('\n{white-fg}📝 Description:{/white-fg}');
       const desc = detection.description.trim().split('\n').map(line => '  ' + line).join('\n');
-      console.log(chalk.gray(desc));
+      gui.log(`{gray-fg}${desc}{/gray-fg}`);
     }
 
     // Execute query
-    console.log(chalk.white('\nExecuting query...'));
+    gui.progress('Executing query');
 
     let events = [];
     try {
@@ -106,12 +98,13 @@ class DetectionRunner {
         this.config.query?.limit || 100
       );
     } catch (error) {
-      console.log(chalk.red(`Error: ${error.message}`));
-      console.log(chalk.yellow('⊘ Skipping this detection due to query error\n'));
+      gui.error(`Error: ${error.message}`);
+      gui.warning('⊘ Skipping this detection due to query error\n');
 
       // Return empty result for this detection
       return {
         title: detection.title,
+        sourceType: detection.sourceType,
         description: detection.description,
         threat: detection.threat,
         false_positives: detection.false_positives,
@@ -120,45 +113,41 @@ class DetectionRunner {
       };
     }
 
-    console.log(chalk.bold.white(`\nResults: ${events.length} event(s) found`));
+    gui.log(`\n{bold}{white-fg}📊 Results: ${events.length} event(s) found{/white-fg}{/bold}`);
+    gui.finding(events.length);
 
     if (events.length > 0) {
-      console.log(chalk.bold.yellow('\n⚠️  FINDINGS DETECTED\n'));
-
       // Show first few events
       const displayCount = Math.min(events.length, 5);
       for (let i = 0; i < displayCount; i++) {
-        this.displayEvent(events[i], i + 1);
+        gui.event(i + 1, events[i]);
       }
 
       if (events.length > displayCount) {
-        console.log(chalk.gray(`  ... and ${events.length - displayCount} more event(s)\n`));
+        gui.log(`{gray-fg}  ... and ${events.length - displayCount} more event(s){/gray-fg}\n`);
       }
 
       // Analysis
-      console.log(chalk.white('Analysis:'));
-      console.log(chalk.yellow(`  ⚠️  ${events.length} event(s) matching this detection pattern`));
-      console.log(chalk.gray(`  Review these events to determine if they represent genuine security concerns`));
-    } else {
-      console.log(chalk.green('\n✓ No events found - This detection did not trigger\n'));
+      gui.log('\n{white-fg}🔍 Analysis:{/white-fg}');
+      gui.log(`{yellow-fg}  ⚠️  ${events.length} event(s) matching this detection pattern{/yellow-fg}`);
+      gui.log(`{gray-fg}  Review these events to determine if they represent genuine security concerns{/gray-fg}`);
     }
 
     // False positives
     if (detection.false_positives) {
-      console.log(chalk.white('False Positives:'));
+      gui.log('\n{white-fg}⚡ False Positives:{/white-fg}');
       const fps = Array.isArray(detection.false_positives)
         ? detection.false_positives
         : [detection.false_positives];
       fps.forEach(fp => {
-        console.log(chalk.gray('  - ' + fp.trim()));
+        gui.log(`{gray-fg}  - ${fp.trim()}{/gray-fg}`);
       });
     }
-
-    console.log(chalk.cyan('='.repeat(80)));
 
     // Return detection result with events
     return {
       title: detection.title,
+      sourceType: detection.sourceType,
       description: detection.description,
       threat: detection.threat,
       false_positives: detection.false_positives,
@@ -169,52 +158,6 @@ class DetectionRunner {
   async runDetection(detection, index, total) {
     const result = await this.runDetectionWithEvents(detection, index, total);
     return result.events.length;
-  }
-
-  displayEvent(event, index) {
-    console.log(chalk.bold.yellow(`Event ${index}:`));
-    console.log(`  ${chalk.bold.cyan('Time:')} ${chalk.white(event.published)}`);
-    console.log(`  ${chalk.bold.cyan('Event Type:')} ${chalk.white(event.eventType)}`);
-
-    if (event.actor && event.actor.alternateId) {
-      console.log(`  ${chalk.bold.cyan('Actor:')} ${chalk.white(event.actor.alternateId)}`);
-    }
-
-    if (event.client) {
-      if (event.client.ipAddress) {
-        console.log(`  ${chalk.bold.cyan('IP Address:')} ${chalk.white(event.client.ipAddress)}`);
-      }
-      if (event.client.geographicalContext) {
-        const geo = event.client.geographicalContext;
-        const location = [geo.city, geo.state, geo.country]
-          .filter(Boolean)
-          .join(', ');
-        if (location) {
-          console.log(`  ${chalk.bold.cyan('Location:')} ${chalk.white(location)}`);
-        }
-      }
-    }
-
-    if (event.outcome) {
-      const outcomeColor = event.outcome.result === 'SUCCESS' ? chalk.green :
-                          event.outcome.result === 'FAILURE' ? chalk.red : chalk.white;
-      console.log(`  ${chalk.bold.cyan('Outcome:')} ${outcomeColor(event.outcome.result)}`);
-      if (event.outcome.reason) {
-        console.log(`  ${chalk.bold.cyan('Reason:')} ${chalk.white(event.outcome.reason)}`);
-      }
-    }
-
-    if (event.target && event.target.length > 0) {
-      const targetNames = event.target
-        .map(t => t.displayName || t.alternateId)
-        .filter(Boolean)
-        .join(', ');
-      if (targetNames) {
-        console.log(`  ${chalk.bold.cyan('Target:')} ${chalk.white(targetNames)}`);
-      }
-    }
-
-    console.log('');
   }
 
   printSummary(results) {

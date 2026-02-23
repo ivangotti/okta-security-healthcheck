@@ -1,4 +1,5 @@
 const chalk = require('chalk');
+const gui = require('./terminalGui');
 
 class CorrelationAnalyzer {
   constructor() {
@@ -13,10 +14,8 @@ class CorrelationAnalyzer {
    * @returns {Object} Correlation analysis results
    */
   analyzeFindings(detectionResults) {
-    console.log(chalk.bold.cyan('\n' + '='.repeat(80)));
-    console.log(chalk.bold.cyan('Performing Correlation Analysis'));
-    console.log(chalk.bold.cyan('='.repeat(80)));
-    console.log(chalk.gray('\nAnalyzing events to identify patterns and risk indicators...\n'));
+    gui.section('Performing Correlation Analysis');
+    gui.log('{gray-fg}🔬 Analyzing events to identify patterns and risk indicators...{/gray-fg}\n');
 
     // Reset correlations
     this.userCorrelations.clear();
@@ -269,66 +268,62 @@ class CorrelationAnalyzer {
   displayAnalysis(topRiskUsers, topRiskIPs, topRiskDevices) {
     // Top Risk Users
     if (topRiskUsers.length > 0) {
-      console.log(chalk.bold.yellow('\n⚠️  TOP RISK USERS\n'));
+      gui.log('\n{bold}{yellow-fg}👥 TOP RISK USERS{/yellow-fg}{/bold}\n');
 
       topRiskUsers.slice(0, 5).forEach((user, index) => {
-        const riskColor = this.getRiskColor(user.riskLevel);
-        console.log(chalk.bold.white(`${index + 1}. ${user.userId}`));
-        console.log(`   ${riskColor(`Risk Level: ${user.riskLevel}`)} (Score: ${user.riskScore})`);
-        console.log(chalk.gray(`   Triggered ${user.findings.size} different finding(s)`));
-        console.log(chalk.gray(`   Total Events: ${user.events.length}`));
-        console.log(chalk.gray(`   IP Addresses: ${user.ips.size}`));
-        console.log(chalk.gray(`   Locations: ${user.locations.size}`));
+        gui.riskUser(index + 1, user.userId, user.riskLevel, user.riskScore);
+        gui.log(`   {gray-fg}🎯 Triggered ${user.findings.size} different finding(s){/gray-fg}`);
+        gui.log(`   {gray-fg}📊 Total Events: ${user.events.length}{/gray-fg}`);
+        gui.log(`   {gray-fg}🌐 IP Addresses: ${user.ips.size}{/gray-fg}`);
+        gui.log(`   {gray-fg}📍 Locations: ${user.locations.size}{/gray-fg}`);
 
         // Show top findings for this user
         const findingCounts = this.getTopFindings(user.events, 3);
         if (findingCounts.length > 0) {
-          console.log(chalk.cyan('   Top Findings:'));
+          gui.log('   {cyan-fg}🔝 Top Findings:{/cyan-fg}');
           findingCounts.forEach(f => {
-            console.log(chalk.gray(`     - ${f.finding} (${f.count} event${f.count > 1 ? 's' : ''})`));
+            gui.log(`   {gray-fg}  - ${f.finding} (${f.count} event${f.count > 1 ? 's' : ''}){/gray-fg}`);
           });
         }
-        console.log('');
+        gui.log('');
       });
     }
 
     // Top Risk IPs
     if (topRiskIPs.length > 0) {
-      console.log(chalk.bold.yellow('\n⚠️  TOP RISK IP ADDRESSES\n'));
+      gui.log('\n{bold}{yellow-fg}🌐 TOP RISK IP ADDRESSES{/yellow-fg}{/bold}\n');
 
       topRiskIPs.slice(0, 5).forEach((ip, index) => {
-        const riskColor = this.getRiskColor(ip.riskLevel);
-        console.log(chalk.bold.white(`${index + 1}. ${ip.ipAddress}`));
-        console.log(`   ${riskColor(`Risk Level: ${ip.riskLevel}`)} (Score: ${ip.riskScore})`);
-        console.log(chalk.gray(`   Triggered ${ip.findings.size} different finding(s)`));
-        console.log(chalk.gray(`   Total Events: ${ip.events.length}`));
-        console.log(chalk.gray(`   Affected Users: ${ip.users.size}`));
+        gui.riskIP(index + 1, ip.ipAddress, ip.riskLevel, ip.riskScore);
+        gui.log(`   {gray-fg}🎯 Triggered ${ip.findings.size} different finding(s){/gray-fg}`);
+        gui.log(`   {gray-fg}📊 Total Events: ${ip.events.length}{/gray-fg}`);
+        gui.log(`   {gray-fg}👥 Affected Users: ${ip.users.size}{/gray-fg}`);
 
         if (ip.locations.size > 0) {
           const locations = Array.from(ip.locations).slice(0, 2).join('; ');
-          console.log(chalk.gray(`   Locations: ${locations}`));
+          gui.log(`   {gray-fg}📍 Locations: ${locations}{/gray-fg}`);
         }
-        console.log('');
+        gui.log('');
       });
     }
 
     // Summary statistics
-    console.log(chalk.bold.cyan('\n📊 Correlation Statistics\n'));
-    console.log(chalk.white(`Total Unique Users Analyzed: ${this.userCorrelations.size}`));
-    console.log(chalk.white(`Total Unique IP Addresses: ${this.ipCorrelations.size}`));
-    console.log(chalk.white(`Total Unique Devices: ${this.deviceCorrelations.size}`));
+    gui.log('\n{bold}{cyan-fg}📊 Correlation Statistics{/cyan-fg}{/bold}\n');
+    gui.log(`{white-fg}👥 Total Unique Users Analyzed: ${this.userCorrelations.size}{/white-fg}`);
+    gui.log(`{white-fg}🌐 Total Unique IP Addresses: ${this.ipCorrelations.size}{/white-fg}`);
+    gui.log(`{white-fg}💻 Total Unique Devices: ${this.deviceCorrelations.size}{/white-fg}`);
 
     const criticalUsers = topRiskUsers.filter(u => u.riskLevel === 'CRITICAL').length;
     const highUsers = topRiskUsers.filter(u => u.riskLevel === 'HIGH').length;
 
     if (criticalUsers > 0) {
-      console.log(chalk.red(`\n⚠️  ${criticalUsers} user(s) with CRITICAL risk level - immediate investigation recommended`));
+      gui.log(`\n{red-fg}🔴 ${criticalUsers} user(s) with CRITICAL risk level - immediate investigation recommended{/red-fg}`);
     }
     if (highUsers > 0) {
-      console.log(chalk.yellow(`⚠️  ${highUsers} user(s) with HIGH risk level - review recommended`));
+      gui.log(`{yellow-fg}🟠 ${highUsers} user(s) with HIGH risk level - review recommended{/yellow-fg}`);
     }
 
-    console.log(chalk.cyan('\n' + '='.repeat(80) + '\n'));
+    gui.log('');
   }
 
   getTopFindings(events, limit) {

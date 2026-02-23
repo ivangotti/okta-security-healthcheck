@@ -3,6 +3,7 @@ const yaml = require('js-yaml');
 const fs = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
+const gui = require('./terminalGui');
 
 class DetectionLoader {
   constructor() {
@@ -35,14 +36,14 @@ class DetectionLoader {
         try {
           const cached = await fs.readFile(cacheFile, 'utf-8');
           const detections = JSON.parse(cached);
-          console.log(chalk.gray(`Loaded ${detections.length} detections and hunts from cache (offline mode)`));
+          gui.log(`{gray-fg}📦 Loaded ${detections.length} detections and hunts from cache (offline mode){/gray-fg}`);
           return detections;
         } catch (err) {
-          console.log(chalk.yellow('Cache not found, fetching from GitHub...'));
+          gui.warning('Cache not found, fetching from GitHub...');
         }
       }
 
-      console.log(chalk.cyan('Fetching latest detection rules and hunts from GitHub...'));
+      gui.info('Fetching latest detection rules and hunts from GitHub...');
 
       const allDetections = [];
       let totalLoadedCount = 0;
@@ -50,7 +51,8 @@ class DetectionLoader {
 
       // Load from each source (detections and hunts)
       for (const source of this.sources) {
-        console.log(chalk.gray(`  Fetching ${source.name}...`));
+        const emoji = source.type === 'hunt' ? '🔍' : '🛡️';
+        gui.progress(`Fetching ${source.name}`);
 
         try {
           // Get list of files from this source
@@ -84,43 +86,43 @@ class DetectionLoader {
               // Small delay to avoid rate limiting
               await this.sleep(100);
             } catch (error) {
-              console.warn(chalk.red(`    ✗ Failed to load ${file.name}: ${error.message}`));
+              gui.log(`{red-fg}    ✗ Failed to load ${file.name}: ${error.message}{/red-fg}`);
             }
           }
 
-          console.log(chalk.green(`    ✓ Loaded ${loadedCount} ${source.name}`));
+          gui.success(`${emoji} Loaded ${loadedCount} ${source.name}`);
           if (skippedCount > 0) {
-            console.log(chalk.gray(`      (Skipped ${skippedCount} non-OIE ${source.name})`));
+            gui.log(`{gray-fg}      (Skipped ${skippedCount} non-OIE ${source.name}){/gray-fg}`);
           }
 
           totalLoadedCount += loadedCount;
           totalSkippedCount += skippedCount;
         } catch (error) {
-          console.warn(chalk.red(`    ✗ Failed to fetch ${source.name}: ${error.message}`));
+          gui.log(`{red-fg}    ✗ Failed to fetch ${source.name}: ${error.message}{/red-fg}`);
         }
       }
 
       // Save to cache as backup
       await fs.writeFile(cacheFile, JSON.stringify(allDetections, null, 2));
 
-      console.log(chalk.green(`\n✓ Total: ${totalLoadedCount} executable detections and hunts from GitHub`));
+      gui.success(`Total: ${totalLoadedCount} executable detections and hunts from GitHub`);
       if (totalSkippedCount > 0) {
-        console.log(chalk.gray(`  (Skipped ${totalSkippedCount} non-OIE items)\n`));
+        gui.log(`{gray-fg}  (Skipped ${totalSkippedCount} non-OIE items){/gray-fg}\n`);
       } else {
-        console.log('');
+        gui.log('');
       }
 
       return allDetections;
     } catch (error) {
       // If GitHub fetch fails, try to load from cache as fallback
-      console.error(chalk.red(`Failed to fetch from GitHub: ${error.message}`));
-      console.log(chalk.yellow('Attempting to load from cache...'));
+      gui.error(`Failed to fetch from GitHub: ${error.message}`);
+      gui.warning('Attempting to load from cache...');
 
       try {
         const cacheFile = path.join(this.cacheDir, 'detections.json');
         const cached = await fs.readFile(cacheFile, 'utf-8');
         const detections = JSON.parse(cached);
-        console.log(chalk.yellow(`⚠ Loaded ${detections.length} detections and hunts from cache (GitHub unavailable)\n`));
+        gui.warning(`⚠ Loaded ${detections.length} detections and hunts from cache (GitHub unavailable)\n`);
         return detections;
       } catch (cacheError) {
         throw new Error(`Failed to load detections and hunts from GitHub and no cache available: ${error.message}`);

@@ -6,6 +6,7 @@ const chalk = require('chalk');
 const OktaClient = require('./oktaClient');
 const DetectionLoader = require('./detectionLoader');
 const DetectionRunner = require('./detectionRunner');
+const gui = require('./terminalGui');
 
 class SecurityHealthCheck {
   constructor() {
@@ -52,24 +53,24 @@ class SecurityHealthCheck {
   }
 
   async initialize() {
-    console.log(chalk.bold.cyan('\nInitializing Okta Security Health Check...\n'));
+    gui.section('Initializing Okta Security Health Check');
 
     // Load configuration
     await this.loadConfig();
-    console.log(chalk.green('✓ Configuration loaded'));
+    gui.success('Configuration loaded');
 
     // Initialize Okta client
     this.oktaClient = new OktaClient(this.config.okta.domain, this.config.okta.apiToken);
-    console.log(chalk.green('✓ Okta client initialized'));
+    gui.success('Okta client initialized');
 
     // Test connection
-    console.log(chalk.gray('  Testing Okta API connection...'));
+    gui.progress('Testing Okta API connection');
     await this.oktaClient.testConnection();
-    console.log(chalk.green('✓ Okta API connection successful'));
+    gui.success('Okta API connection successful');
 
     // Initialize detection runner
     this.detectionRunner = new DetectionRunner(this.oktaClient, this.config);
-    console.log(chalk.green('✓ Detection runner initialized\n'));
+    gui.success('Detection runner initialized\n');
   }
 
   async listDetections(useCache = false) {
@@ -77,25 +78,25 @@ class SecurityHealthCheck {
     const detectionCount = detections.filter(d => d.sourceType === 'detection').length;
     const huntCount = detections.filter(d => d.sourceType === 'hunt').length;
 
-    console.log(chalk.bold.cyan('\nAvailable Security Detections and Hunts:\n'));
+    gui.section('Available Security Detections and Hunts');
 
     detections.forEach((detection, i) => {
-      const typeLabel = detection.sourceType === 'hunt' ? chalk.magenta('[HUNT]') : chalk.cyan('[DETECTION]');
-      console.log(typeLabel + ' ' + chalk.green(`${i + 1}. ${detection.title}`));
+      const typeLabel = detection.sourceType === 'hunt' ? '{magenta-fg}[HUNT]{/magenta-fg}' : '{cyan-fg}[DETECTION]{/cyan-fg}';
+      gui.log(`${typeLabel} {green-fg}${i + 1}. ${detection.title}{/green-fg}`);
       if (detection.description) {
         const shortDesc = detection.description.trim().split('\n')[0];
-        console.log(chalk.gray(`   ${shortDesc}`));
+        gui.log(`   {gray-fg}${shortDesc}{/gray-fg}`);
       }
       if (detection.threat && detection.threat.Tactic) {
         const tactics = Array.isArray(detection.threat.Tactic)
           ? detection.threat.Tactic.join(', ')
           : detection.threat.Tactic;
-        console.log(chalk.yellow(`   Tactic: ${tactics}`));
+        gui.log(`   {yellow-fg}Tactic: ${tactics}{/yellow-fg}`);
       }
-      console.log('');
+      gui.log('');
     });
 
-    console.log(chalk.white(`Total: ${detections.length} checks (${detectionCount} detections, ${huntCount} hunts)\n`));
+    gui.log(`{white-fg}Total: ${detections.length} checks (${detectionCount} detections, ${huntCount} hunts){/white-fg}\n`);
   }
 
   async runSpecificDetection(detectionName, useCache = false) {
@@ -108,8 +109,8 @@ class SecurityHealthCheck {
     );
 
     if (!detection) {
-      console.error(chalk.red(`\nError: Detection or hunt not found: ${detectionName}`));
-      console.log(chalk.yellow('\nUse --list to see all available detections and hunts\n'));
+      gui.error(`Detection or hunt not found: ${detectionName}`);
+      gui.warning('Use --list to see all available detections and hunts\n');
       process.exit(1);
     }
 
@@ -198,6 +199,9 @@ class SecurityHealthCheck {
         return;
       }
 
+      // Initialize terminal GUI
+      gui.initialize();
+
       await this.initialize();
 
       // Override config with command-line options
@@ -206,11 +210,11 @@ class SecurityHealthCheck {
           this.config.query = {};
         }
         this.config.query.since = options.since;
-        console.log(chalk.yellow(`Using custom time range: since ${options.since}\n`));
+        gui.warning(`Using custom time range: since ${options.since}\n`);
       }
 
       if (options.offline) {
-        console.log(chalk.yellow('Running in offline mode - using cached detections and hunts\n'));
+        gui.warning('Running in offline mode - using cached detections and hunts\n');
       }
 
       if (options.list) {
@@ -221,10 +225,20 @@ class SecurityHealthCheck {
         await this.runAllDetections(options.offline);
       }
 
+      // Keep GUI open at the end
+      gui.log('\n{green-fg}{bold}✓ Scan complete! Press ESC or Q to exit.{/bold}{/green-fg}');
+
     } catch (error) {
-      console.error(chalk.red(`\nError: ${error.message}`));
-      if (error.stack) {
-        console.error(chalk.gray(error.stack));
+      if (gui.isInitialized) {
+        gui.error(`Error: ${error.message}`);
+        if (error.stack) {
+          gui.log(`{gray-fg}${error.stack}{/gray-fg}`);
+        }
+      } else {
+        console.error(chalk.red(`\nError: ${error.message}`));
+        if (error.stack) {
+          console.error(chalk.gray(error.stack));
+        }
       }
       process.exit(1);
     }
