@@ -65,16 +65,19 @@ async function testGui() {
   gui.riskIP(1, '203.0.113.50', 'HIGH', 142);
 
   await sleep(1000);
-  gui.log('\n{green-fg}{bold}✅ GUI Test Complete! Watch the bouncing mascot in the top right!{/bold}{/green-fg}');
+  gui.log('\n{green-fg}{bold}✅ GUI Test Complete! Watch the owl mascot with different expressions!{/bold}{/green-fg}');
   gui.log('{cyan-fg}Notice the black background and Okta org URL in the header!{/cyan-fg}');
-  gui.log('{cyan-fg}Exiting in 3 seconds...{/cyan-fg}');
+  gui.log('{cyan-fg}The owl shows 8 different expressions as it animates!{/cyan-fg}');
+  gui.log('{cyan-fg}Exiting in 5 seconds...{/cyan-fg}');
 
-  // Auto-exit after 3 seconds for testing
+  // Increase timeout to see more animation frames
   setTimeout(() => {
     gui.cleanup();
     process.exit(0);
-  }, 3000);
+  }, 5000);
+
 }
+
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

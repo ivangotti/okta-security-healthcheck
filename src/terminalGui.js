@@ -134,39 +134,47 @@ class TerminalGui {
   }
 
   startMascotAnimation() {
-    // Claude-like mascot animation frames with bouncing effect
+    // Cute owl mascot animation frames with different expressions
     const frames = [
-      // Frame 0 - base position
-      `{green-fg}  /\\_/\\
- ( o.o )
-  > ^ <{/green-fg}`,
-      // Frame 1 - bounce up
-      `{green-fg}  /\\_/\\
- ( ^.^ )
-  > ^ <{/green-fg}`,
-      // Frame 2 - higher
-      `{green-fg}  /\\_/\\
- ( ◠.◠ )
-  > ^ <{/green-fg}`,
-      // Frame 3 - bounce down
-      `{green-fg}  /\\_/\\
- ( o.o )
-  > v <{/green-fg}`,
-      // Frame 4 - wink
-      `{green-fg}  /\\_/\\
- ( -.o )
-  > ^ <{/green-fg}`,
-      // Frame 5 - happy
-      `{green-fg}  /\\_/\\
- ( ^ω^ )
-  > ^ <{/green-fg}`
+      // Frame 0 - normal
+      `{cyan-fg}  ,___,
+ [o.o]
+  )::({/cyan-fg}`,
+      // Frame 1 - happy
+      `{cyan-fg}  ,___,
+ [^.^]
+  )::({/cyan-fg}`,
+      // Frame 2 - vigilant
+      `{cyan-fg}  ,___,
+ [O.O]
+  )::({/cyan-fg}`,
+      // Frame 3 - wink
+      `{cyan-fg}  ,___,
+ [-.o]
+  )::({/cyan-fg}`,
+      // Frame 4 - alert
+      `{cyan-fg}  ,___,
+ [@.@]
+  )::({/cyan-fg}`,
+      // Frame 5 - sleepy
+      `{cyan-fg}  ,___,
+ [-.-]
+  )::({/cyan-fg}`,
+      // Frame 6 - excited
+      `{cyan-fg}  ,___,
+ [*.*]
+  )::({/cyan-fg}`,
+      // Frame 7 - watching
+      `{cyan-fg}  ,___,
+ [o.o]
+  )::({/cyan-fg}`
     ];
 
     this.mascotInterval = setInterval(() => {
       this.mascotBox.setContent(frames[this.mascotFrame]);
       this.mascotFrame = (this.mascotFrame + 1) % frames.length;
       this.screen.render();
-    }, 400); // Change frame every 400ms
+    }, 500); // Change frame every 500ms
   }
 
   log(message, style = '') {
