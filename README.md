@@ -10,12 +10,14 @@ A powerful Node.js application that executes security detection rules and threat
 
 - **43+ Security Checks** - Automatically executes 31+ detection rules and 12+ threat hunts
 - **Dynamic Updates** - Fetches latest detections and hunts from GitHub on every run
-- **PDF Report Generation** - Beautiful, professional PDF reports with all findings automatically generated
+- **Risk Correlation Analysis** - Automatically correlates events across findings to identify high-risk users and IPs
+- **PDF Report Generation** - Beautiful, professional PDF reports with findings and risk analysis
+- **Intelligent Risk Scoring** - Calculates risk scores based on patterns, frequency, and severity
+- **Top Risk Entities** - Identifies top 10 risk users and IPs with detailed breakdown
 - **Verbose Output** - Color-coded terminal output with detailed event information
 - **Hunt vs Detection** - Clearly distinguishes between real-time detections and proactive threat hunts
 - **Smart Caching** - Falls back to cached rules if GitHub is unavailable
 - **Offline Mode** - Run scans using cached detection rules and hunts
-- **Risk Assessment** - Automatic risk level calculation (LOW/MODERATE/HIGH)
 
 ## 🎯 What It Detects
 
@@ -205,6 +207,51 @@ Total Events: 159
 - **MITRE ATT&CK tactics** for threat context
 - **False positive guidance** to reduce alert fatigue
 
+## 🔍 Risk Correlation Analysis
+
+After all detections and hunts complete, the app performs intelligent correlation analysis to identify the highest-risk entities in your environment.
+
+### How It Works
+
+The correlation engine analyzes all security events and groups them by:
+
+1. **User Identity** - Tracks all events per user account
+2. **IP Address** - Identifies suspicious IPs affecting multiple users
+3. **Device** - Correlates events from the same device
+4. **Geographic Location** - Detects impossible travel patterns
+
+### Risk Scoring Algorithm
+
+Each entity receives a risk score based on multiple factors:
+
+**User Risk Factors:**
+- Number of different security findings triggered (20 points each)
+- Total security events (2 points each, capped at 100)
+- Multiple IP addresses used (10 points per IP - compromise indicator)
+- Multiple geographic locations (15 points per location - impossible travel)
+- Failed/denied authentication attempts (3 points each)
+- Diverse event types (5 points per type - broad attack surface)
+
+**IP Risk Factors:**
+- Number of different security findings (20 points each)
+- Total security events (2 points each)
+- Multiple user accounts (25 points per user - shared compromise)
+- Multiple geographic locations (15 points per location - proxy/VPN)
+
+**Risk Levels:**
+- **CRITICAL** (150+ points) - Immediate investigation required
+- **HIGH** (100-149 points) - Prompt review recommended
+- **MODERATE** (50-99 points) - Monitor closely
+- **LOW** (<50 points) - Normal activity
+
+### Output
+
+The analysis displays:
+- **Top 10 Risk Users** with detailed breakdown
+- **Top 10 Risk IPs** with affected user counts
+- **Correlation Statistics** (total users, IPs, devices analyzed)
+- **Risk Distribution** (count by risk level)
+
 ## 📄 PDF Report
 
 After each scan completes, a beautiful PDF report is automatically generated with the filename: `okta-security-scan-YYYY-MM-DD.pdf`
@@ -221,9 +268,17 @@ After each scan completes, a beautiful PDF report is automatically generated wit
 - Risk assessment (LOW/MODERATE/HIGH) with color coding
 - Summary of key findings
 
+**Risk Correlation Analysis** ⭐ NEW
+- Top risk users with scores and risk levels
+- Top risk IP addresses with affected user counts
+- Correlation statistics and patterns
+- Risk level distribution breakdown
+- Detailed event breakdown per entity
+
 **Detailed Findings**
 - Each detection with findings gets a dedicated section
-- Detection description and MITRE ATT&CK tactics
+- Detection/hunt type label and description
+- MITRE ATT&CK tactics
 - Event details including:
   - Timestamp
   - Actor (user/service)
@@ -234,12 +289,14 @@ After each scan completes, a beautiful PDF report is automatically generated wit
 
 **Professional Formatting**
 - Clean typography with Helvetica fonts
-- Color-coded risk indicators
+- Color-coded risk indicators (red for CRITICAL, orange for HIGH)
 - Statistics boxes with visual appeal
 - Page headers and footers with page numbers
 - Organized sections for easy navigation
 
 The PDF is perfect for:
+- Identifying compromised accounts and IPs
+- Prioritizing security investigations
 - Sharing with security teams
 - Compliance documentation
 - Executive reporting
@@ -250,15 +307,16 @@ The PDF is perfect for:
 ```
 sec-healthcheck/
 ├── src/
-│   ├── index.js            # Main entry point & CLI
-│   ├── oktaClient.js       # Okta API wrapper
-│   ├── detectionLoader.js  # GitHub detection fetcher
-│   ├── detectionRunner.js  # Detection executor
-│   └── pdfGenerator.js     # PDF report generator
-├── config.json.example     # Configuration template
-├── package.json           # Dependencies
-├── README.md             # This file
-└── CLAUDE.md            # Developer documentation
+│   ├── index.js              # Main entry point & CLI
+│   ├── oktaClient.js         # Okta API wrapper
+│   ├── detectionLoader.js    # GitHub detection fetcher
+│   ├── detectionRunner.js    # Detection executor
+│   ├── correlationAnalyzer.js # Risk correlation engine
+│   └── pdfGenerator.js       # PDF report generator
+├── config.json.example       # Configuration template
+├── package.json             # Dependencies
+├── README.md               # This file
+└── CLAUDE.md              # Developer documentation
 ```
 
 ### How It Works
@@ -267,8 +325,9 @@ sec-healthcheck/
 2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats) and tags each with type (detection vs hunt)
 3. **Okta Client** executes each query against your tenant's System Log API
 4. **Runner** displays results with comprehensive context, analysis, and type distinction
-5. **PDF Generator** creates a beautiful report with all findings
-6. **Smart Caching** saves all rules locally as backup
+5. **Correlation Analyzer** examines all events to identify high-risk users, IPs, and devices
+6. **PDF Generator** creates a beautiful report with findings and risk analysis
+7. **Smart Caching** saves all rules locally as backup
 
 ## 🔒 Security Considerations
 

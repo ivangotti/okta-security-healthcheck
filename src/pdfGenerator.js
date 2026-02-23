@@ -39,6 +39,12 @@ class PDFGenerator {
         // Generate report content
         this.addTitlePage(doc, timestamp, config);
         this.addExecutiveSummary(doc, findings);
+
+        // Add correlation analysis if available
+        if (findings.correlationAnalysis) {
+          this.addCorrelationAnalysis(doc, findings.correlationAnalysis);
+        }
+
         this.addFindingsDetail(doc, findings);
 
         doc.end();
@@ -208,6 +214,197 @@ class PDFGenerator {
            .text(`${finding.events.length} event(s) found`, { indent: 30 });
       });
     }
+  }
+
+  addCorrelationAnalysis(doc, analysis) {
+    doc.addPage();
+
+    // Section title
+    doc.fontSize(24)
+       .fillColor('#1976D2')
+       .font('Helvetica-Bold')
+       .text('Risk Correlation Analysis');
+
+    doc.moveDown(1);
+
+    // Overview
+    doc.fontSize(11)
+       .fillColor('#666')
+       .font('Helvetica')
+       .text('This analysis correlates security events across all findings to identify high-risk users, IP addresses, and devices based on patterns, frequency, and severity of suspicious activities.');
+
+    doc.moveDown(1.5);
+
+    // Top Risk Users
+    if (analysis.topRiskUsers && analysis.topRiskUsers.length > 0) {
+      doc.fontSize(18)
+         .fillColor('#F44336')
+         .font('Helvetica-Bold')
+         .text('Top Risk Users');
+
+      doc.moveDown(0.5);
+
+      // Show top 5 users
+      analysis.topRiskUsers.slice(0, 5).forEach((user, index) => {
+        // Check if we need a new page
+        if (doc.y > 650) {
+          doc.addPage();
+        }
+
+        const riskColor = this.getRiskLevelColor(user.riskLevel);
+
+        doc.fontSize(12)
+           .fillColor('#333')
+           .font('Helvetica-Bold')
+           .text(`${index + 1}. ${user.userId}`);
+
+        doc.fontSize(10)
+           .fillColor(riskColor)
+           .font('Helvetica-Bold')
+           .text(`   Risk Level: ${user.riskLevel} (Score: ${user.riskScore})`, { indent: 15 });
+
+        doc.fontSize(9)
+           .fillColor('#666')
+           .font('Helvetica')
+           .text(`   • Triggered ${user.findings.size} different finding(s)`, { indent: 15 })
+           .text(`   • Total Events: ${user.events.length}`, { indent: 15 })
+           .text(`   • IP Addresses Used: ${user.ips.size}`, { indent: 15 })
+           .text(`   • Geographic Locations: ${user.locations.size}`, { indent: 15 });
+
+        // Show top findings for this user
+        if (user.events.length > 0) {
+          const findingCounts = this.getTopFindingsFromEvents(user.events, 3);
+          if (findingCounts.length > 0) {
+            doc.fontSize(9)
+               .fillColor('#1976D2')
+               .font('Helvetica-Bold')
+               .text('   Top Findings:', { indent: 15 });
+
+            findingCounts.forEach(f => {
+              doc.fontSize(8)
+                 .fillColor('#666')
+                 .font('Helvetica')
+                 .text(`     - ${f.finding} (${f.count} event${f.count > 1 ? 's' : ''})`, { indent: 20 });
+            });
+          }
+        }
+
+        doc.moveDown(0.5);
+      });
+
+      doc.moveDown(1);
+    }
+
+    // Top Risk IP Addresses
+    if (analysis.topRiskIPs && analysis.topRiskIPs.length > 0) {
+      doc.fontSize(18)
+         .fillColor('#F44336')
+         .font('Helvetica-Bold')
+         .text('Top Risk IP Addresses');
+
+      doc.moveDown(0.5);
+
+      // Show top 5 IPs
+      analysis.topRiskIPs.slice(0, 5).forEach((ip, index) => {
+        // Check if we need a new page
+        if (doc.y > 700) {
+          doc.addPage();
+        }
+
+        const riskColor = this.getRiskLevelColor(ip.riskLevel);
+
+        doc.fontSize(12)
+           .fillColor('#333')
+           .font('Helvetica-Bold')
+           .text(`${index + 1}. ${ip.ipAddress}`);
+
+        doc.fontSize(10)
+           .fillColor(riskColor)
+           .font('Helvetica-Bold')
+           .text(`   Risk Level: ${ip.riskLevel} (Score: ${ip.riskScore})`, { indent: 15 });
+
+        doc.fontSize(9)
+           .fillColor('#666')
+           .font('Helvetica')
+           .text(`   • Triggered ${ip.findings.size} different finding(s)`, { indent: 15 })
+           .text(`   • Total Events: ${ip.events.length}`, { indent: 15 })
+           .text(`   • Affected Users: ${ip.users.size}`, { indent: 15 });
+
+        if (ip.locations.size > 0) {
+          const locations = Array.from(ip.locations).slice(0, 2).join('; ');
+          doc.text(`   • Locations: ${locations}`, { indent: 15 });
+        }
+
+        doc.moveDown(0.5);
+      });
+
+      doc.moveDown(1);
+    }
+
+    // Summary Statistics
+    doc.fontSize(14)
+       .fillColor('#333')
+       .font('Helvetica-Bold')
+       .text('Correlation Statistics');
+
+    doc.moveDown(0.5);
+
+    doc.fontSize(10)
+       .fillColor('#666')
+       .font('Helvetica')
+       .text(`Total Unique Users Analyzed: ${analysis.totalCorrelations.users}`)
+       .text(`Total Unique IP Addresses: ${analysis.totalCorrelations.ips}`)
+       .text(`Total Unique Devices: ${analysis.totalCorrelations.devices}`);
+
+    // Risk level breakdown
+    if (analysis.topRiskUsers && analysis.topRiskUsers.length > 0) {
+      const criticalUsers = analysis.topRiskUsers.filter(u => u.riskLevel === 'CRITICAL').length;
+      const highUsers = analysis.topRiskUsers.filter(u => u.riskLevel === 'HIGH').length;
+      const moderateUsers = analysis.topRiskUsers.filter(u => u.riskLevel === 'MODERATE').length;
+
+      doc.moveDown(0.5);
+      doc.fontSize(10)
+         .fillColor('#333')
+         .font('Helvetica-Bold')
+         .text('Risk Level Distribution:');
+
+      doc.fontSize(9)
+         .fillColor('#666')
+         .font('Helvetica');
+
+      if (criticalUsers > 0) {
+        doc.fillColor('#D32F2F').text(`  CRITICAL: ${criticalUsers} user(s) - Immediate investigation required`);
+      }
+      if (highUsers > 0) {
+        doc.fillColor('#F57C00').text(`  HIGH: ${highUsers} user(s) - Prompt review recommended`);
+      }
+      if (moderateUsers > 0) {
+        doc.fillColor('#FBC02D').text(`  MODERATE: ${moderateUsers} user(s) - Monitor closely`);
+      }
+    }
+  }
+
+  getRiskLevelColor(level) {
+    switch (level) {
+      case 'CRITICAL': return '#D32F2F';
+      case 'HIGH': return '#F57C00';
+      case 'MODERATE': return '#FBC02D';
+      case 'LOW': return '#388E3C';
+      default: return '#666';
+    }
+  }
+
+  getTopFindingsFromEvents(events, limit) {
+    const findingCounts = {};
+    events.forEach(event => {
+      const finding = event.finding || 'Unknown';
+      findingCounts[finding] = (findingCounts[finding] || 0) + 1;
+    });
+
+    return Object.entries(findingCounts)
+      .map(([finding, count]) => ({ finding, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
   }
 
   addFindingsDetail(doc, findings) {

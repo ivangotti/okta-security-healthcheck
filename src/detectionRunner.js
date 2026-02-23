@@ -1,11 +1,13 @@
 const chalk = require('chalk');
 const PDFGenerator = require('./pdfGenerator');
+const CorrelationAnalyzer = require('./correlationAnalyzer');
 
 class DetectionRunner {
   constructor(oktaClient, config) {
     this.oktaClient = oktaClient;
     this.config = config;
     this.pdfGenerator = new PDFGenerator();
+    this.correlationAnalyzer = new CorrelationAnalyzer();
   }
 
   async runAllDetections(detections) {
@@ -57,6 +59,10 @@ class DetectionRunner {
       // Small delay between detections
       await this.sleep(200);
     }
+
+    // Perform correlation analysis
+    const correlationAnalysis = this.correlationAnalyzer.analyzeFindings(results.detectionResults);
+    results.correlationAnalysis = correlationAnalysis;
 
     // Generate PDF report
     console.log(chalk.bold.cyan('\n' + '='.repeat(80)));

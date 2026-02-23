@@ -82,7 +82,26 @@ node src/index.js --help
   - Results with event details (time, actor, IP, outcome)
   - Analysis and interpretation
   - False positive notes
-- Generates summary statistics and PDF reports
+- Performs correlation analysis after all detections complete
+- Generates summary statistics and PDF reports with risk analysis
+
+**src/correlationAnalyzer.js** - Risk Correlation Engine
+- Analyzes all findings to identify high-risk entities
+- Correlates events across multiple detections/hunts by:
+  - User identity (actor)
+  - IP address
+  - Device identifier
+  - Geographic location
+- Calculates risk scores based on:
+  - Number of different findings triggered
+  - Total event count
+  - Multiple IPs per user (account compromise indicator)
+  - Multiple locations (geographic impossibility)
+  - Multiple users per IP (shared compromised endpoint)
+  - Failed/denied outcome ratio
+- Assigns risk levels: CRITICAL, HIGH, MODERATE, LOW
+- Generates top 10 risk users and top 10 risk IPs
+- Provides detailed breakdown for investigation
 
 ### Detection File Structure
 
