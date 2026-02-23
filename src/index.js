@@ -226,8 +226,9 @@ class SecurityHealthCheck {
         await this.runAllDetections(options.offline);
       }
 
-      // Keep GUI open at the end
-      gui.log('\n{green-fg}{bold}✓ Scan complete! Press ESC or Q to exit.{/bold}{/green-fg}');
+      // Show completion message with elapsed time
+      gui.showElapsedTime();
+      console.log('\n' + chalk.bold.green('✓ Scan complete!') + chalk.gray(' All security checks finished.\n'));
 
     } catch (error) {
       if (gui.isInitialized) {

@@ -17,9 +17,11 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.6.0",
-    "blessed": "^0.1.81",
+    "boxen": "^5.1.2",
     "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
     "js-yaml": "^4.1.0",
+    "ora": "^5.4.1",
     "pdfkit": "^0.17.2"
   }
 }
