@@ -269,7 +269,18 @@ class CorrelationAnalyzer {
     // Top Risk Users
     if (topRiskUsers.length > 0) {
       gui.log('\n{bold}{yellow-fg}👥 TOP RISK USERS (Cross-Detection Analysis){/yellow-fg}{/bold}\n');
-      gui.log('{gray-fg}These users triggered multiple security detections/hunts across your environment:{/gray-fg}\n');
+
+      // Show summary of users found in multiple detections
+      const usersInMultipleDetections = topRiskUsers.filter(u => u.findings.size > 1);
+      if (usersInMultipleDetections.length > 0) {
+        gui.log(`{bold}{red-fg}⚠️  ${usersInMultipleDetections.length} user(s) found in MULTIPLE detections/hunts:{/red-fg}{/bold}`);
+        usersInMultipleDetections.slice(0, 10).forEach(u => {
+          gui.log(`   {yellow-fg}• ${u.userId}{/yellow-fg} {gray-fg}- found in ${u.findings.size} different detection(s)/hunt(s){/gray-fg}`);
+        });
+        gui.log('');
+      }
+
+      gui.log('{gray-fg}Detailed analysis of top risk users:{/gray-fg}\n');
 
       topRiskUsers.slice(0, 5).forEach((user, index) => {
         gui.riskUser(index + 1, user.userId, user.riskLevel, user.riskScore);
@@ -299,7 +310,18 @@ class CorrelationAnalyzer {
     // Top Risk IPs
     if (topRiskIPs.length > 0) {
       gui.log('\n{bold}{yellow-fg}🌐 TOP RISK IP ADDRESSES (Cross-User Analysis){/yellow-fg}{/bold}\n');
-      gui.log('{gray-fg}These IPs triggered multiple security detections/hunts affecting multiple users:{/gray-fg}\n');
+
+      // Show summary of IPs found in multiple detections
+      const ipsInMultipleDetections = topRiskIPs.filter(ip => ip.findings.size > 1);
+      if (ipsInMultipleDetections.length > 0) {
+        gui.log(`{bold}{red-fg}⚠️  ${ipsInMultipleDetections.length} IP(s) found in MULTIPLE detections/hunts:{/red-fg}{/bold}`);
+        ipsInMultipleDetections.slice(0, 10).forEach(ip => {
+          gui.log(`   {yellow-fg}• ${ip.ipAddress}{/yellow-fg} {gray-fg}- found in ${ip.findings.size} different detection(s)/hunt(s), affecting ${ip.users.size} user(s){/gray-fg}`);
+        });
+        gui.log('');
+      }
+
+      gui.log('{gray-fg}Detailed analysis of top risk IPs:{/gray-fg}\n');
 
       topRiskIPs.slice(0, 5).forEach((ip, index) => {
         gui.riskIP(index + 1, ip.ipAddress, ip.riskLevel, ip.riskScore);
@@ -327,19 +349,34 @@ class CorrelationAnalyzer {
     }
 
     // Summary statistics
-    gui.log('\n{bold}{cyan-fg}📊 Correlation Statistics{/cyan-fg}{/bold}\n');
+    gui.log('\n{bold}{cyan-fg}📊 Correlation Statistics Summary{/cyan-fg}{/bold}\n');
     gui.log(`{white-fg}👥 Total Unique Users Analyzed: ${this.userCorrelations.size}{/white-fg}`);
     gui.log(`{white-fg}🌐 Total Unique IP Addresses: ${this.ipCorrelations.size}{/white-fg}`);
     gui.log(`{white-fg}💻 Total Unique Devices: ${this.deviceCorrelations.size}{/white-fg}`);
 
+    // Count entities found in multiple detections
+    const allUsers = Array.from(this.userCorrelations.values());
+    const allIPs = Array.from(this.ipCorrelations.values());
+    const usersInMultiple = allUsers.filter(u => u.findings.size > 1).length;
+    const ipsInMultiple = allIPs.filter(ip => ip.findings.size > 1).length;
+
+    gui.log('');
+    gui.log(`{bold}{yellow-fg}🎯 Cross-Detection Findings:{/yellow-fg}{/bold}`);
+    gui.log(`   {white-fg}${usersInMultiple} user(s) appeared in multiple detections/hunts{/white-fg}`);
+    gui.log(`   {white-fg}${ipsInMultiple} IP(s) appeared in multiple detections/hunts{/white-fg}`);
+
     const criticalUsers = topRiskUsers.filter(u => u.riskLevel === 'CRITICAL').length;
     const highUsers = topRiskUsers.filter(u => u.riskLevel === 'HIGH').length;
 
-    if (criticalUsers > 0) {
-      gui.log(`\n{red-fg}🔴 ${criticalUsers} user(s) with CRITICAL risk level - immediate investigation recommended{/red-fg}`);
-    }
-    if (highUsers > 0) {
-      gui.log(`{yellow-fg}🟠 ${highUsers} user(s) with HIGH risk level - review recommended{/yellow-fg}`);
+    if (criticalUsers > 0 || highUsers > 0) {
+      gui.log('');
+      gui.log(`{bold}{red-fg}⚠️  Action Required:{/red-fg}{/bold}`);
+      if (criticalUsers > 0) {
+        gui.log(`   {red-fg}🔴 ${criticalUsers} user(s) with CRITICAL risk level - immediate investigation required{/red-fg}`);
+      }
+      if (highUsers > 0) {
+        gui.log(`   {yellow-fg}🟠 ${highUsers} user(s) with HIGH risk level - prompt review recommended{/yellow-fg}`);
+      }
     }
 
     gui.log('');

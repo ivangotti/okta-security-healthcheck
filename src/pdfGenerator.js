@@ -233,7 +233,35 @@ class PDFGenerator {
        .font('Helvetica')
        .text('This analysis correlates security events across all findings to identify high-risk users, IP addresses, and devices based on patterns, frequency, and severity of suspicious activities.');
 
-    doc.moveDown(1.5);
+    doc.moveDown(1);
+
+    // Cross-detection summary
+    if (analysis.topRiskUsers && analysis.topRiskUsers.length > 0) {
+      const usersInMultiple = analysis.topRiskUsers.filter(u => u.findings.size > 1);
+      const ipsInMultiple = (analysis.topRiskIPs || []).filter(ip => ip.findings.size > 1);
+
+      doc.fontSize(12)
+         .fillColor('#F44336')
+         .font('Helvetica-Bold')
+         .text('⚠ Key Finding: Entities Found in Multiple Detections');
+
+      doc.moveDown(0.3);
+
+      doc.fontSize(10)
+         .fillColor('#666')
+         .font('Helvetica')
+         .text(`• ${usersInMultiple.length} user(s) appeared in multiple different detections/hunts`)
+         .text(`• ${ipsInMultiple.length} IP address(es) appeared in multiple different detections/hunts`);
+
+      doc.moveDown(0.3);
+
+      doc.fontSize(9)
+         .fillColor('#999')
+         .font('Helvetica-Oblique')
+         .text('Users and IPs appearing in multiple security findings indicate coordinated attacks, compromised accounts, or persistent threats requiring immediate investigation.');
+
+      doc.moveDown(1.5);
+    }
 
     // Top Risk Users
     if (analysis.topRiskUsers && analysis.topRiskUsers.length > 0) {

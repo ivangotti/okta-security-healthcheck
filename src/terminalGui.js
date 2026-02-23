@@ -41,7 +41,6 @@ class TerminalGui {
       },
       style: {
         fg: 'white',
-        bg: 'blue',
         border: {
           fg: 'cyan'
         }
@@ -56,12 +55,11 @@ class TerminalGui {
       height: 3,
       tags: true,
       style: {
-        fg: 'green',
-        bg: 'blue'
+        fg: 'green'
       }
     });
 
-    // Create scrolling log box with black background
+    // Create scrolling log box
     this.logBox = blessed.log({
       top: 5,
       left: 0,
@@ -84,7 +82,6 @@ class TerminalGui {
       vi: true,
       style: {
         fg: 'white',
-        bg: 'black',
         border: {
           fg: 'cyan'
         }
