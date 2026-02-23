@@ -1,18 +1,17 @@
-const ora = require('ora');
-const boxen = require('boxen');
+const blessed = require('blessed');
 const chalk = require('chalk');
-const Table = require('cli-table3');
 
-/**
- * Modern terminal UI using industry-standard libraries
- * Patterns based on Vercel, Next.js, Vite, and Prisma CLIs
- */
 class TerminalGui {
   constructor() {
+    this.screen = null;
+    this.header = null;
+    this.logBox = null;
+    this.mascotBox = null;
+    this.mascotFrame = 0;
+    this.mascotInterval = null;
+    this.headerInterval = null;
     this.isInitialized = false;
     this.oktaDomain = null;
-    this.currentSpinner = null;
-    this.startTime = null;
   }
 
   initialize(config = null) {
@@ -23,144 +22,230 @@ class TerminalGui {
       this.oktaDomain = config.okta.domain;
     }
 
-    this.startTime = Date.now();
-    this.isInitialized = true;
+    // Create screen
+    this.screen = blessed.screen({
+      smartCSR: true,
+      fullUnicode: true,
+      title: 'Okta Security Healthcheck'
+    });
 
-    // Show welcome header
-    this.showHeader();
+    // Create header box with border (height 6 to fit content + owl)
+    this.header = blessed.box({
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: 6,
+      tags: true,
+      border: {
+        type: 'line',
+        fg: 'cyan'
+      },
+      style: {
+        fg: 'white'
+      }
+    });
+
+    // Create mascot animation box (inside header, top right)
+    this.mascotBox = blessed.box({
+      parent: this.header,
+      top: 0,
+      right: 1,
+      width: 9,
+      height: 3,
+      tags: true,
+      style: {
+        fg: 'green'
+      }
+    });
+
+    // Create scrolling log area with border
+    this.logBox = blessed.log({
+      top: 6,
+      left: 0,
+      width: '100%',
+      height: '100%-6',
+      tags: true,
+      border: {
+        type: 'line',
+        fg: 'cyan'
+      },
+      scrollable: true,
+      alwaysScroll: true,
+      scrollbar: {
+        ch: '█',
+        fg: 'cyan'
+      },
+      mouse: true,
+      keys: true,
+      vi: true,
+      style: {
+        fg: 'white'
+      }
+    });
+
+    // Add components to screen (mascot is already child of header)
+    this.screen.append(this.header);
+    this.screen.append(this.logBox);
+
+    // Update header with title and time
+    this.updateHeader();
+
+    // Update header time every second
+    this.headerInterval = setInterval(() => {
+      this.updateHeader();
+      this.screen.render();
+    }, 1000);
+
+    // Start mascot animation
+    this.startMascotAnimation();
+
+    // Handle exit
+    this.screen.key(['escape', 'q', 'C-c'], () => {
+      this.cleanup();
+      process.exit(0);
+    });
+
+    // Focus on log box for scrolling
+    this.logBox.focus();
+
+    // Initial render
+    this.screen.render();
+
+    this.isInitialized = true;
   }
 
-  showHeader() {
+  updateHeader() {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0];
 
-    const headerContent = [
-      chalk.bold.cyan('🔒 Okta Security Healthcheck') + chalk.yellow(' by Ivan Gotti'),
-      chalk.gray(`📅 ${dateStr} ⏰ ${timeStr}`),
-      this.oktaDomain ? chalk.white('🌐 Scanning: ') + chalk.green(this.oktaDomain) : ''
-    ].filter(Boolean).join('\n');
+    let headerText = `{bold}{cyan-fg}🔒 Okta Security Healthcheck{/cyan-fg}{/bold} {yellow-fg}by Ivan Gotti{/yellow-fg}\n` +
+                     `{gray-fg}📅 ${dateStr} ⏰ ${timeStr}{/gray-fg}`;
 
-    console.log(
-      boxen(headerContent, {
-        padding: 1,
-        margin: { top: 1, bottom: 1 },
-        borderStyle: 'round',
-        borderColor: 'cyan'
-      })
-    );
+    // Add Okta org URL if available
+    if (this.oktaDomain) {
+      headerText += `\n{white-fg}🌐 Scanning:{/white-fg} {green-fg}${this.oktaDomain}{/green-fg}`;
+    }
+
+    this.header.setContent(headerText);
   }
 
-  log(message) {
-    // Stop current spinner if active
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.stop();
+  startMascotAnimation() {
+    // Cute owl mascot animation frames with different expressions
+    const frames = [
+      // Frame 0 - normal
+      `{cyan-fg}  ,___,
+ [o.o]
+  )::({/cyan-fg}`,
+      // Frame 1 - happy
+      `{cyan-fg}  ,___,
+ [^.^]
+  )::({/cyan-fg}`,
+      // Frame 2 - vigilant
+      `{cyan-fg}  ,___,
+ [O.O]
+  )::({/cyan-fg}`,
+      // Frame 3 - wink
+      `{cyan-fg}  ,___,
+ [-.o]
+  )::({/cyan-fg}`,
+      // Frame 4 - alert
+      `{cyan-fg}  ,___,
+ [@.@]
+  )::({/cyan-fg}`,
+      // Frame 5 - sleepy
+      `{cyan-fg}  ,___,
+ [-.-]
+  )::({/cyan-fg}`,
+      // Frame 6 - excited
+      `{cyan-fg}  ,___,
+ [*.*]
+  )::({/cyan-fg}`,
+      // Frame 7 - watching
+      `{cyan-fg}  ,___,
+ [o.o]
+  )::({/cyan-fg}`
+    ];
+
+    this.mascotInterval = setInterval(() => {
+      this.mascotBox.setContent(frames[this.mascotFrame]);
+      this.mascotFrame = (this.mascotFrame + 1) % frames.length;
+      this.screen.render();
+    }, 500); // Change frame every 500ms
+  }
+
+  log(message, style = '') {
+    if (!this.isInitialized) {
+      console.log(message);
+      return;
     }
-    console.log(message);
+
+    // Strip chalk colors and convert to blessed tags
+    let formattedMessage = this.convertChalkToBlessedTags(message);
+
+    // Add line to scrolling log
+    this.logBox.pushLine(formattedMessage);
+    this.screen.render();
+  }
+
+  convertChalkToBlessedTags(text) {
+    // Remove ANSI codes
+    text = text.replace(/\x1b\[[0-9;]*m/g, '');
+
+    // Return as-is, blessed will handle it
+    return text;
   }
 
   // Colored logging helpers
   success(message) {
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.succeed(message);
-      this.currentSpinner = null;
-    } else {
-      console.log(chalk.green('✓') + ' ' + message);
-    }
+    this.log(`{green-fg}✓ ${message}{/green-fg}`);
   }
 
   error(message) {
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.fail(message);
-      this.currentSpinner = null;
-    } else {
-      console.log(chalk.red('✗') + ' ' + message);
-    }
+    this.log(`{red-fg}✗ ${message}{/red-fg}`);
   }
 
   warning(message) {
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.warn(message);
-      this.currentSpinner = null;
-    } else {
-      console.log(chalk.yellow('⚠') + ' ' + message);
-    }
+    this.log(`{yellow-fg}⚠ ${message}{/yellow-fg}`);
   }
 
   info(message) {
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.info(message);
-      this.currentSpinner = null;
-    } else {
-      console.log(chalk.cyan('ℹ') + ' ' + message);
-    }
+    this.log(`{cyan-fg}ℹ ${message}{/cyan-fg}`);
   }
 
   section(title) {
-    // Stop current spinner if active
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.stop();
-      this.currentSpinner = null;
-    }
-
-    console.log('\n' + boxen(chalk.bold.cyan(title), {
-      padding: { left: 2, right: 2, top: 0, bottom: 0 },
-      margin: { top: 1, bottom: 1 },
-      borderStyle: 'round',
-      borderColor: 'cyan'
-    }));
+    const separator = '═'.repeat(76);
+    this.log(`\n{bold}{cyan-fg}${separator}{/cyan-fg}{/bold}`);
+    this.log(`{bold}{cyan-fg}${title}{/cyan-fg}{/bold}`);
+    this.log(`{bold}{cyan-fg}${separator}{/cyan-fg}{/bold}\n`);
   }
 
   detection(index, total, title, type = 'detection') {
-    // Stop previous spinner if exists
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.stop();
-    }
-
     const emoji = type === 'hunt' ? '🔍' : '🛡️';
-    const typeLabel = type === 'hunt' ? chalk.magenta('[HUNT]') : chalk.cyan('[DETECTION]');
-    const progress = chalk.gray(`[${index}/${total}]`);
-
-    this.currentSpinner = ora({
-      text: `${progress} ${typeLabel} ${title}`,
-      prefixText: emoji
-    }).start();
+    const typeLabel = type === 'hunt' ? '{magenta-fg}[HUNT]{/magenta-fg}' : '{cyan-fg}[DETECTION]{/cyan-fg}';
+    this.log(`\n{bold}${emoji} [${index}/${total}] ${typeLabel} ${title}{/bold}`);
   }
 
   finding(count) {
     if (count > 0) {
-      if (this.currentSpinner && this.currentSpinner.isSpinning) {
-        this.currentSpinner.stopAndPersist({
-          symbol: chalk.yellow('⚠️'),
-          text: this.currentSpinner.text + chalk.yellow(` → ${count} event(s) found`)
-        });
-      } else {
-        console.log(chalk.yellow('⚠️  FINDINGS DETECTED: ') + chalk.bold(`${count} event(s)`));
-      }
+      this.log(`{bold}{yellow-fg}⚠️  FINDINGS DETECTED: ${count} event(s){/yellow-fg}{/bold}`);
     } else {
-      if (this.currentSpinner && this.currentSpinner.isSpinning) {
-        this.currentSpinner.succeed(this.currentSpinner.text + chalk.gray(' → No events'));
-      } else {
-        console.log(chalk.green('✓ No events found - This detection did not trigger'));
-      }
+      this.log(`{green-fg}✓ No events found - This detection did not trigger{/green-fg}`);
     }
-    this.currentSpinner = null;
   }
 
   riskUser(index, userId, riskLevel, score) {
     const emoji = this.getRiskEmoji(riskLevel);
-    const colorFn = this.getRiskColorFunction(riskLevel);
-
-    console.log(`\n${emoji} ${chalk.bold(index + '. ' + userId)}`);
-    console.log(`   ${colorFn('Risk Level: ' + riskLevel)} ${chalk.gray('(Score: ' + score + ')')}`);
+    const color = this.getRiskColor(riskLevel);
+    this.log(`\n{bold}${emoji} ${index}. ${userId}{/bold}`);
+    this.log(`   {${color}-fg}Risk Level: ${riskLevel}{/${color}-fg} (Score: ${score})`);
   }
 
   riskIP(index, ip, riskLevel, score) {
     const emoji = this.getRiskEmoji(riskLevel);
-    const colorFn = this.getRiskColorFunction(riskLevel);
-
-    console.log(`\n🌐 ${chalk.bold(index + '. ' + ip)}`);
-    console.log(`   ${colorFn('Risk Level: ' + riskLevel)} ${chalk.gray('(Score: ' + score + ')')}`);
+    const color = this.getRiskColor(riskLevel);
+    this.log(`\n{bold}🌐 ${index}. ${ip}{/bold}`);
+    this.log(`   {${color}-fg}Risk Level: ${riskLevel}{/${color}-fg} (Score: ${score})`);
   }
 
   getRiskEmoji(level) {
@@ -173,128 +258,138 @@ class TerminalGui {
     }
   }
 
-  getRiskColorFunction(level) {
+  getRiskColor(level) {
     switch (level) {
-      case 'CRITICAL': return chalk.red.bold;
-      case 'HIGH': return chalk.yellow.bold;
-      case 'MODERATE': return chalk.yellow;
-      case 'LOW': return chalk.green;
-      default: return chalk.gray;
+      case 'CRITICAL': return 'red';
+      case 'HIGH': return 'yellow';
+      case 'MODERATE': return 'yellow';
+      case 'LOW': return 'green';
+      default: return 'gray';
     }
   }
 
   event(index, event) {
-    console.log(`\n${chalk.yellow.bold('📋 Event ' + index + ':')}`);
-    console.log(`  ${chalk.cyan('⏰ Time:')} ${event.published}`);
-    console.log(`  ${chalk.cyan('📌 Event Type:')} ${event.eventType}`);
+    // Event header with index
+    this.log(`\n{bold}{yellow-fg}┌─ 📋 Event ${index} ─────────────────────────────────{/yellow-fg}{/bold}`);
 
+    // Format timestamp in a more readable way
+    const timestamp = new Date(event.published).toLocaleString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}⏰ Time:{/white-fg}{/bold}       {cyan-fg}${timestamp}{/cyan-fg}`);
+
+    // Event Type with highlighting
+    this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}📌 Event Type:{/white-fg}{/bold}  {magenta-fg}${event.eventType}{/magenta-fg}`);
+
+    // Actor with highlighting
     if (event.actor?.alternateId) {
-      console.log(`  ${chalk.cyan('👤 Actor:')} ${event.actor.alternateId}`);
+      this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}👤 Actor:{/white-fg}{/bold}      {green-fg}${event.actor.alternateId}{/green-fg}`);
     }
 
+    // Display name if different from alternateId
+    if (event.actor?.displayName && event.actor.displayName !== event.actor.alternateId) {
+      this.log(`{yellow-fg}│{/yellow-fg}   {gray-fg}Display Name: ${event.actor.displayName}{/gray-fg}`);
+    }
+
+    // IP Address with emphasis
     if (event.client?.ipAddress) {
-      console.log(`  ${chalk.cyan('🌐 IP Address:')} ${event.client.ipAddress}`);
+      this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}🌐 IP Address:{/white-fg}{/bold}  {cyan-fg}${event.client.ipAddress}{/cyan-fg}`);
     }
 
+    // User Agent if available
+    if (event.client?.userAgent?.rawUserAgent) {
+      const ua = event.client.userAgent.rawUserAgent;
+      const shortUA = ua.length > 60 ? ua.substring(0, 57) + '...' : ua;
+      this.log(`{yellow-fg}│{/yellow-fg}   {gray-fg}🖥️  User Agent: ${shortUA}{/gray-fg}`);
+    }
+
+    // Geographic location with flag-like indicator
     if (event.client?.geographicalContext) {
       const geo = event.client.geographicalContext;
       const location = [geo.city, geo.state, geo.country].filter(Boolean).join(', ');
       if (location) {
-        console.log(`  ${chalk.cyan('📍 Location:')} ${location}`);
+        this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}📍 Location:{/white-fg}{/bold}   {yellow-fg}${location}{/yellow-fg}`);
       }
     }
 
+    // Device information if available
+    if (event.client?.device) {
+      this.log(`{yellow-fg}│{/yellow-fg}   {gray-fg}📱 Device: ${event.client.device}{/gray-fg}`);
+    }
+
+    // Outcome with contextual emoji and color
     if (event.outcome) {
-      const outcomeColor = event.outcome.result === 'SUCCESS' ? chalk.green :
-                          event.outcome.result === 'FAILURE' ? chalk.red : chalk.white;
-      console.log(`  ${chalk.cyan('✓ Outcome:')} ${outcomeColor(event.outcome.result)}`);
+      let outcomeEmoji = '✓';
+      let outcomeColor = 'white';
 
+      if (event.outcome.result === 'SUCCESS') {
+        outcomeEmoji = '✅';
+        outcomeColor = 'green';
+      } else if (event.outcome.result === 'FAILURE') {
+        outcomeEmoji = '❌';
+        outcomeColor = 'red';
+      } else if (event.outcome.result === 'DENY' || event.outcome.result === 'DENIED') {
+        outcomeEmoji = '🚫';
+        outcomeColor = 'red';
+      } else if (event.outcome.result === 'ALLOW') {
+        outcomeEmoji = '✅';
+        outcomeColor = 'green';
+      }
+
+      this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}${outcomeEmoji} Outcome:{/white-fg}{/bold}   {bold}{${outcomeColor}-fg}${event.outcome.result}{/${outcomeColor}-fg}{/bold}`);
+
+      // Reason with better formatting
       if (event.outcome.reason) {
-        console.log(`  ${chalk.cyan('💬 Reason:')} ${event.outcome.reason}`);
+        this.log(`{yellow-fg}│{/yellow-fg}   {gray-fg}💬 Reason: ${event.outcome.reason}{/gray-fg}`);
       }
     }
+
+    // Target information if available
+    if (event.target && event.target.length > 0) {
+      const target = event.target[0];
+      if (target.displayName) {
+        this.log(`{yellow-fg}│{/yellow-fg} {bold}{white-fg}🎯 Target:{/white-fg}{/bold}     {cyan-fg}${target.displayName}{/cyan-fg} {gray-fg}(${target.type}){/gray-fg}`);
+      }
+    }
+
+    // Debug context if available
+    if (event.debugContext?.debugData) {
+      const debug = event.debugContext.debugData;
+      if (debug.requestUri) {
+        this.log(`{yellow-fg}│{/yellow-fg}   {gray-fg}🔗 Request: ${debug.requestUri}{/gray-fg}`);
+      }
+    }
+
+    // Close the event box
+    this.log(`{yellow-fg}└───────────────────────────────────────────────────{/yellow-fg}`);
   }
 
   progress(message) {
-    // Stop previous spinner if exists
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.stop();
-    }
-
-    this.currentSpinner = ora(message).start();
-  }
-
-  /**
-   * Display a summary table (modern CLI pattern)
-   */
-  summaryTable(data) {
-    const table = new Table({
-      head: [chalk.cyan('Metric'), chalk.cyan('Value')],
-      style: {
-        head: [],
-        border: ['cyan']
-      }
-    });
-
-    Object.entries(data).forEach(([key, value]) => {
-      table.push([key, value]);
-    });
-
-    console.log('\n' + table.toString());
-  }
-
-  /**
-   * Display risk summary as a formatted table
-   */
-  riskSummaryTable(summary) {
-    const table = new Table({
-      head: [chalk.cyan('Risk Level'), chalk.cyan('Count'), chalk.cyan('Users')],
-      style: {
-        head: [],
-        border: ['cyan']
-      }
-    });
-
-    const riskLevels = ['CRITICAL', 'HIGH', 'MODERATE', 'LOW'];
-    riskLevels.forEach(level => {
-      if (summary[level]) {
-        const emoji = this.getRiskEmoji(level);
-        const colorFn = this.getRiskColorFunction(level);
-        table.push([
-          `${emoji} ${colorFn(level)}`,
-          summary[level].count || 0,
-          summary[level].users?.slice(0, 3).join(', ') || 'None'
-        ]);
-      }
-    });
-
-    console.log('\n' + table.toString());
-  }
-
-  /**
-   * Show elapsed time
-   */
-  showElapsedTime() {
-    if (this.startTime) {
-      const elapsed = Math.round((Date.now() - this.startTime) / 1000);
-      const minutes = Math.floor(elapsed / 60);
-      const seconds = elapsed % 60;
-      const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-      console.log(chalk.gray(`\n⏱  Completed in ${timeStr}`));
-    }
+    this.log(`{gray-fg}⏳ ${message}...{/gray-fg}`);
   }
 
   cleanup() {
-    // Stop any active spinner
-    if (this.currentSpinner && this.currentSpinner.isSpinning) {
-      this.currentSpinner.stop();
+    if (this.mascotInterval) {
+      clearInterval(this.mascotInterval);
     }
-    // No screen to destroy in modern approach
+    if (this.headerInterval) {
+      clearInterval(this.headerInterval);
+    }
+    if (this.screen) {
+      this.screen.destroy();
+    }
   }
 
   render() {
-    // No-op in modern stdout-based approach
-    // Kept for API compatibility
+    if (this.screen) {
+      this.screen.render();
+    }
   }
 }
 
