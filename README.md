@@ -8,16 +8,18 @@ A powerful Node.js application that executes security detection rules and threat
 
 ## 🚀 Features
 
+- **🎨 Beautiful Terminal GUI** - Interactive interface with fixed header, animated Cthulhu 🐙, and scrolling output
 - **43+ Security Checks** - Automatically executes 31+ detection rules and 12+ threat hunts
 - **Dynamic Updates** - Fetches latest detections and hunts from GitHub on every run
 - **Risk Correlation Analysis** - Automatically correlates events across findings to identify high-risk users and IPs
 - **PDF Report Generation** - Beautiful, professional PDF reports with findings and risk analysis
 - **Intelligent Risk Scoring** - Calculates risk scores based on patterns, frequency, and severity
 - **Top Risk Entities** - Identifies top 10 risk users and IPs with detailed breakdown
-- **Verbose Output** - Color-coded terminal output with detailed event information
+- **Colorful Output** - Rich emoji usage 🛡️🔍📊 and color-coded messages throughout
 - **Hunt vs Detection** - Clearly distinguishes between real-time detections and proactive threat hunts
 - **Smart Caching** - Falls back to cached rules if GitHub is unavailable
 - **Offline Mode** - Run scans using cached detection rules and hunts
+- **Interactive Controls** - Mouse and keyboard scrolling, ESC/Q to exit
 
 ## 🎯 What It Detects
 
@@ -93,6 +95,47 @@ cp config.json.example config.json
 6. Paste it into your `config.json`
 
 **Note:** The token needs the `okta.logs.read` scope to access system logs.
+
+## 🎨 Terminal GUI
+
+The app features a beautiful, interactive terminal interface:
+
+### Header Section
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🔒 Okta Security Healthcheck by Ivan Gotti        🐙 R'lyeh │
+│ 📅 2026-02-23 ⏰ 14:30:45                                    │
+├─────────────────────────────────────────────────────────────┤
+```
+
+- **Title & Branding** - App name with your name prominently displayed
+- **Live Date/Time** - Current date and time updated in header
+- **Animated Cthulhu** - 🐙 Octopus/squid animation bounces in top right (homage to the lurking threats!)
+- **Blue Background** - Professional color scheme with cyan borders
+
+### Scrolling Output Area
+
+The main content area displays:
+- 🛡️ **Detections** - Shield emoji for security detections
+- 🔍 **Hunts** - Magnifying glass for threat hunts
+- ✓ **Success** - Green checkmarks for completed operations
+- ✗ **Error** - Red X for failures
+- ⚠ **Warning** - Yellow alerts
+- ℹ **Info** - Cyan information messages
+- 📋 **Events** - Structured event details with emojis
+- 🔴🟠🟡🟢 **Risk Levels** - Color-coded risk indicators (Critical/High/Moderate/Low)
+- 👥 **Users** - User correlation analysis
+- 🌐 **IPs** - IP address tracking
+- 📊 **Statistics** - Metrics and summaries
+
+### Interactive Controls
+
+- **Mouse Wheel** - Scroll through results
+- **Arrow Keys** - Navigate up/down
+- **Page Up/Down** - Scroll by page
+- **ESC or Q** - Exit the application
+
+The GUI stays open after scanning completes so you can review all results. Simply press ESC or Q when done!
 
 ## 💻 Usage
 

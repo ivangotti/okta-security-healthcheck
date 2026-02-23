@@ -85,6 +85,23 @@ node src/index.js --help
 - Performs correlation analysis after all detections complete
 - Generates summary statistics and PDF reports with risk analysis
 
+**src/terminalGui.js** - Terminal User Interface Manager
+- Singleton GUI instance using blessed library
+- Fixed header with app title, author credit, and live timestamp
+- Animated Cthulhu (🐙/🦑) in top right corner (500ms frame changes)
+- Scrolling log area with syntax highlighting
+- Color-coded message types (success, error, warning, info)
+- Rich emoji support throughout interface
+- Mouse and keyboard navigation (ESC/Q to exit)
+- Specialized display methods:
+  - `gui.section()` - Section headers
+  - `gui.detection()` - Detection/hunt headers with type labels
+  - `gui.event()` - Structured event display
+  - `gui.riskUser()` / `gui.riskIP()` - Risk entity displays
+  - `gui.finding()` - Finding count display
+- Blessed tag support for colors and formatting
+- Screen cleanup on exit
+
 **src/correlationAnalyzer.js** - Risk Correlation Engine
 - Analyzes all findings to identify high-risk entities
 - Correlates events across multiple detections/hunts by:
