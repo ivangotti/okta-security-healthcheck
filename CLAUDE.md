@@ -88,7 +88,8 @@ node src/index.js --help
 **src/terminalGui.js** - Terminal User Interface Manager
 - Singleton GUI instance using blessed library
 - Fixed header (5 lines) with app title, author credit, live timestamp, and Okta org URL
-- Animated ASCII art mascot in top right corner (400ms frame changes, 6 expressions)
+- Animated ASCII art owl mascot in top right corner (500ms frame changes, 8 expressions)
+- Owl design sourced from ascii.co.uk with expressions: normal, happy, vigilant, wink, alert, sleepy, excited
 - Scrolling log area with black background for high contrast
 - Color-coded message types (success, error, warning, info)
 - Rich emoji support throughout interface

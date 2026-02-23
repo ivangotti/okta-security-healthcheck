@@ -103,9 +103,9 @@ The app features a beautiful, interactive terminal interface:
 ### Header Section
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 🔒 Okta Security Healthcheck by Ivan Gotti     /\_/\        │
-│ 📅 2026-02-23 ⏰ 14:30:45                      ( o.o )       │
-│ 🌐 Scanning: your-company.okta.com              > ^ <        │
+│ 🔒 Okta Security Healthcheck by Ivan Gotti     ,___,        │
+│ 📅 2026-02-23 ⏰ 14:30:45                      [o.o]         │
+│ 🌐 Scanning: your-company.okta.com              )::(         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │ [Black Background Scrolling Content]                        │
@@ -114,9 +114,11 @@ The app features a beautiful, interactive terminal interface:
 - **Title & Branding** - App name with your name prominently displayed
 - **Live Date/Time** - Current date and time updated in header
 - **Okta Org URL** - Shows which tenant is being scanned (🌐 Scanning: domain.okta.com)
-- **ASCII Art Mascot** - Cute bouncing character in top right with animated expressions
+- **Animated Owl Mascot** - Wise owl with 8 expressions (normal, happy, vigilant, wink, alert, sleepy, excited)
 - **Blue Header** - Professional blue background for header
 - **Black Content Area** - High contrast black background for log output
+
+The owl symbolizes wisdom and vigilance - perfect for a security monitoring tool!
 
 ### Scrolling Output Area
 
