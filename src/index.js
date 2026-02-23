@@ -55,8 +55,6 @@ class SecurityHealthCheck {
   async initialize() {
     gui.section('Initializing Okta Security Health Check');
 
-    // Load configuration
-    await this.loadConfig();
     gui.success('Configuration loaded');
 
     // Initialize Okta client
@@ -199,8 +197,11 @@ class SecurityHealthCheck {
         return;
       }
 
-      // Initialize terminal GUI
-      gui.initialize();
+      // Load config first to pass to GUI
+      await this.loadConfig();
+
+      // Initialize terminal GUI with config
+      gui.initialize(this.config);
 
       await this.initialize();
 

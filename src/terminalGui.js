@@ -6,14 +6,20 @@ class TerminalGui {
     this.screen = null;
     this.header = null;
     this.logBox = null;
-    this.cthulhuBox = null;
-    this.cthulhuFrame = 0;
-    this.cthulhuInterval = null;
+    this.mascotBox = null;
+    this.mascotFrame = 0;
+    this.mascotInterval = null;
     this.isInitialized = false;
+    this.oktaDomain = null;
   }
 
-  initialize() {
+  initialize(config = null) {
     if (this.isInitialized) return;
+
+    // Store Okta domain if provided
+    if (config && config.okta && config.okta.domain) {
+      this.oktaDomain = config.okta.domain;
+    }
 
     // Create screen
     this.screen = blessed.screen({
@@ -23,12 +29,12 @@ class TerminalGui {
       title: 'Okta Security Healthcheck'
     });
 
-    // Create header box
+    // Create header box (increased height for mascot and org info)
     this.header = blessed.box({
       top: 0,
       left: 0,
       width: '100%',
-      height: 4,
+      height: 5,
       tags: true,
       border: {
         type: 'line'
@@ -42,12 +48,12 @@ class TerminalGui {
       }
     });
 
-    // Create Cthulhu animation box (top right)
-    this.cthulhuBox = blessed.box({
+    // Create mascot animation box (top right)
+    this.mascotBox = blessed.box({
       top: 1,
       right: 2,
-      width: 20,
-      height: 2,
+      width: 15,
+      height: 3,
       tags: true,
       style: {
         fg: 'green',
@@ -55,12 +61,12 @@ class TerminalGui {
       }
     });
 
-    // Create scrolling log box
+    // Create scrolling log box with black background
     this.logBox = blessed.log({
-      top: 4,
+      top: 5,
       left: 0,
       width: '100%',
-      height: '100%-4',
+      height: '100%-5',
       tags: true,
       border: {
         type: 'line'
@@ -87,14 +93,14 @@ class TerminalGui {
 
     // Add all components to screen
     this.screen.append(this.header);
-    this.screen.append(this.cthulhuBox);
+    this.screen.append(this.mascotBox);
     this.screen.append(this.logBox);
 
     // Update header with title and time
     this.updateHeader();
 
-    // Start Cthulhu animation
-    this.startCthulhuAnimation();
+    // Start mascot animation
+    this.startMascotAnimation();
 
     // Handle exit
     this.screen.key(['escape', 'q', 'C-c'], () => {
@@ -116,68 +122,51 @@ class TerminalGui {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0];
 
-    const headerText = `{bold}{cyan-fg}🔒 Okta Security Healthcheck{/cyan-fg}{/bold} {yellow-fg}by Ivan Gotti{/yellow-fg}\n` +
-                      `{gray-fg}📅 ${dateStr} ⏰ ${timeStr}{/gray-fg}`;
+    let headerText = `{bold}{cyan-fg}🔒 Okta Security Healthcheck{/cyan-fg}{/bold} {yellow-fg}by Ivan Gotti{/yellow-fg}\n` +
+                     `{gray-fg}📅 ${dateStr} ⏰ ${timeStr}{/gray-fg}`;
+
+    // Add Okta org URL if available
+    if (this.oktaDomain) {
+      headerText += `\n{white-fg}🌐 Scanning:{/white-fg} {green-fg}${this.oktaDomain}{/green-fg}`;
+    }
 
     this.header.setContent(headerText);
   }
 
-  startCthulhuAnimation() {
-    // Cthulhu animation frames
+  startMascotAnimation() {
+    // Claude-like mascot animation frames with bouncing effect
     const frames = [
-      // Frame 0 - normal
-      `   ⢀⣀⣀⡀
-  ⢿⣿⣿⣿⡿
-   ⠈⠙⠋⠁ `,
-      // Frame 1 - tentacles up
-      `   ⣤⣤⣤
-  ⢿⣿⣿⣿⡿
-   ⠈⠙⠋⠁ `,
-      // Frame 2 - tentacles out
-      `  ⢀⣀⣀⡀
- ⢸⣿⣿⣿⣿⡇
-  ⠈⠙⠋⠁  `,
-      // Frame 3 - bounce
-      `  ⢀⣀⣀⡀
-  ⢿⣿⣿⣿⡿
-   ⠘⠛⠃  `
+      // Frame 0 - base position
+      `{green-fg}  /\\_/\\
+ ( o.o )
+  > ^ <{/green-fg}`,
+      // Frame 1 - bounce up
+      `{green-fg}  /\\_/\\
+ ( ^.^ )
+  > ^ <{/green-fg}`,
+      // Frame 2 - higher
+      `{green-fg}  /\\_/\\
+ ( ◠.◠ )
+  > ^ <{/green-fg}`,
+      // Frame 3 - bounce down
+      `{green-fg}  /\\_/\\
+ ( o.o )
+  > v <{/green-fg}`,
+      // Frame 4 - wink
+      `{green-fg}  /\\_/\\
+ ( -.o )
+  > ^ <{/green-fg}`,
+      // Frame 5 - happy
+      `{green-fg}  /\\_/\\
+ ( ^ω^ )
+  > ^ <{/green-fg}`
     ];
 
-    // Alternate ASCII Cthulhu frames
-    const altFrames = [
-      `     /\\___/\\
-    ( o   o )
-    (  =^=  )
-    (        )
-    (         )
-   (          ))))))`,
-      `     /\\___/\\
-    ( O   O )
-    (  =*=  )
-    (        )
-    (         )
-   (          ))))))`,
-      `     /\\___/\\
-    ( -   - )
-    (  =^=  )
-    (        )
-    (         )
-   (          )))))) `
-    ];
-
-    // Simple Cthulhu frames that work well in terminal
-    const simpleFrames = [
-      `  {green-fg}🐙  R'lyeh{/green-fg}`,
-      `  {green-fg}🦑  R'lyeh{/green-fg}`,
-      `  {green-fg}🐙  R'lyeh{/green-fg}`,
-      `  {green-fg}🦑  R'lyeh{/green-fg}`
-    ];
-
-    this.cthulhuInterval = setInterval(() => {
-      this.cthulhuBox.setContent(simpleFrames[this.cthulhuFrame]);
-      this.cthulhuFrame = (this.cthulhuFrame + 1) % simpleFrames.length;
+    this.mascotInterval = setInterval(() => {
+      this.mascotBox.setContent(frames[this.mascotFrame]);
+      this.mascotFrame = (this.mascotFrame + 1) % frames.length;
       this.screen.render();
-    }, 500); // Change frame every 500ms
+    }, 400); // Change frame every 400ms
   }
 
   log(message, style = '') {
@@ -310,8 +299,8 @@ class TerminalGui {
   }
 
   cleanup() {
-    if (this.cthulhuInterval) {
-      clearInterval(this.cthulhuInterval);
+    if (this.mascotInterval) {
+      clearInterval(this.mascotInterval);
     }
     if (this.screen) {
       this.screen.destroy();
