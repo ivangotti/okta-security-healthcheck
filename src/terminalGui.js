@@ -9,6 +9,7 @@ class TerminalGui {
     this.mascotBox = null;
     this.mascotFrame = 0;
     this.mascotInterval = null;
+    this.headerInterval = null;
     this.isInitialized = false;
     this.oktaDomain = null;
   }
@@ -28,35 +29,28 @@ class TerminalGui {
       title: 'Okta Security Healthcheck'
     });
 
-    // Create header box (increased height for mascot and org info)
+    // Create header box with border (height 6 to fit content + owl)
     this.header = blessed.box({
       top: 0,
       left: 0,
       width: '100%',
-      height: 4,
+      height: 6,
       tags: true,
+      border: {
+        type: 'line',
+        fg: 'cyan'
+      },
       style: {
         fg: 'white'
       }
     });
 
-    // Create divider line between header and content
-    this.divider = blessed.line({
-      top: 4,
-      left: 0,
-      width: '100%',
-      orientation: 'horizontal',
-      type: 'line',
-      style: {
-        fg: 'cyan'
-      }
-    });
-
-    // Create mascot animation box (top right)
+    // Create mascot animation box (inside header, top right)
     this.mascotBox = blessed.box({
-      top: 1,
-      right: 2,
-      width: 15,
+      parent: this.header,
+      top: 0,
+      right: 1,
+      width: 9,
       height: 3,
       tags: true,
       style: {
@@ -64,13 +58,17 @@ class TerminalGui {
       }
     });
 
-    // Create content box (updates in place, no scrolling)
-    this.logBox = blessed.box({
-      top: 5,
+    // Create scrolling log area with border
+    this.logBox = blessed.log({
+      top: 6,
       left: 0,
       width: '100%',
-      height: '100%-5',
+      height: '100%-6',
       tags: true,
+      border: {
+        type: 'line',
+        fg: 'cyan'
+      },
       scrollable: true,
       alwaysScroll: true,
       scrollbar: {
@@ -85,17 +83,18 @@ class TerminalGui {
       }
     });
 
-    // Content buffer for current display
-    this.contentBuffer = [];
-
-    // Add all components to screen
+    // Add components to screen (mascot is already child of header)
     this.screen.append(this.header);
-    this.screen.append(this.divider);
-    this.screen.append(this.mascotBox);
     this.screen.append(this.logBox);
 
     // Update header with title and time
     this.updateHeader();
+
+    // Update header time every second
+    this.headerInterval = setInterval(() => {
+      this.updateHeader();
+      this.screen.render();
+    }, 1000);
 
     // Start mascot animation
     this.startMascotAnimation();
@@ -184,23 +183,8 @@ class TerminalGui {
     // Strip chalk colors and convert to blessed tags
     let formattedMessage = this.convertChalkToBlessedTags(message);
 
-    // Add to buffer
-    this.contentBuffer.push(formattedMessage);
-
-    // Update display
-    this.updateDisplay();
-  }
-
-  clear() {
-    this.contentBuffer = [];
-    this.updateDisplay();
-  }
-
-  updateDisplay() {
-    if (!this.isInitialized) return;
-
-    // Join all buffered content and set it
-    this.logBox.setContent(this.contentBuffer.join('\n'));
+    // Add line to scrolling log
+    this.logBox.pushLine(formattedMessage);
     this.screen.render();
   }
 
@@ -323,6 +307,9 @@ class TerminalGui {
   cleanup() {
     if (this.mascotInterval) {
       clearInterval(this.mascotInterval);
+    }
+    if (this.headerInterval) {
+      clearInterval(this.headerInterval);
     }
     if (this.screen) {
       this.screen.destroy();

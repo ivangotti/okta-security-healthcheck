@@ -43,7 +43,6 @@ class DetectionLoader {
         }
       }
 
-      gui.clear();
       gui.info('Fetching latest detection rules and hunts from GitHub...');
 
       const allDetections = [];
