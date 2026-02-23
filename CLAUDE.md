@@ -87,9 +87,9 @@ node src/index.js --help
 
 **src/terminalGui.js** - Terminal User Interface Manager
 - Singleton GUI instance using blessed library
-- Fixed header with app title, author credit, and live timestamp
-- Animated Cthulhu (🐙/🦑) in top right corner (500ms frame changes)
-- Scrolling log area with syntax highlighting
+- Fixed header (5 lines) with app title, author credit, live timestamp, and Okta org URL
+- Animated ASCII art mascot in top right corner (400ms frame changes, 6 expressions)
+- Scrolling log area with black background for high contrast
 - Color-coded message types (success, error, warning, info)
 - Rich emoji support throughout interface
 - Mouse and keyboard navigation (ESC/Q to exit)
@@ -101,6 +101,7 @@ node src/index.js --help
   - `gui.finding()` - Finding count display
 - Blessed tag support for colors and formatting
 - Screen cleanup on exit
+- Accepts config parameter to display Okta domain in header
 
 **src/correlationAnalyzer.js** - Risk Correlation Engine
 - Analyzes all findings to identify high-risk entities

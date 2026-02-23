@@ -8,7 +8,7 @@ A powerful Node.js application that executes security detection rules and threat
 
 ## 🚀 Features
 
-- **🎨 Beautiful Terminal GUI** - Interactive interface with fixed header, animated Cthulhu 🐙, and scrolling output
+- **🎨 Beautiful Terminal GUI** - Interactive interface with fixed header, animated ASCII mascot, and black background scrolling output
 - **43+ Security Checks** - Automatically executes 31+ detection rules and 12+ threat hunts
 - **Dynamic Updates** - Fetches latest detections and hunts from GitHub on every run
 - **Risk Correlation Analysis** - Automatically correlates events across findings to identify high-risk users and IPs
@@ -103,15 +103,20 @@ The app features a beautiful, interactive terminal interface:
 ### Header Section
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 🔒 Okta Security Healthcheck by Ivan Gotti        🐙 R'lyeh │
-│ 📅 2026-02-23 ⏰ 14:30:45                                    │
+│ 🔒 Okta Security Healthcheck by Ivan Gotti     /\_/\        │
+│ 📅 2026-02-23 ⏰ 14:30:45                      ( o.o )       │
+│ 🌐 Scanning: your-company.okta.com              > ^ <        │
 ├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ [Black Background Scrolling Content]                        │
 ```
 
 - **Title & Branding** - App name with your name prominently displayed
 - **Live Date/Time** - Current date and time updated in header
-- **Animated Cthulhu** - 🐙 Octopus/squid animation bounces in top right (homage to the lurking threats!)
-- **Blue Background** - Professional color scheme with cyan borders
+- **Okta Org URL** - Shows which tenant is being scanned (🌐 Scanning: domain.okta.com)
+- **ASCII Art Mascot** - Cute bouncing character in top right with animated expressions
+- **Blue Header** - Professional blue background for header
+- **Black Content Area** - High contrast black background for log output
 
 ### Scrolling Output Area
 
