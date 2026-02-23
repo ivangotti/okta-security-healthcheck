@@ -240,14 +240,20 @@ class PDFGenerator {
       doc.fontSize(18)
          .fillColor('#F44336')
          .font('Helvetica-Bold')
-         .text('Top Risk Users');
+         .text('Top Risk Users (Cross-Detection Analysis)');
+
+      doc.moveDown(0.3);
+      doc.fontSize(10)
+         .fillColor('#666')
+         .font('Helvetica')
+         .text('These users triggered multiple security detections/hunts across your environment:');
 
       doc.moveDown(0.5);
 
       // Show top 5 users
       analysis.topRiskUsers.slice(0, 5).forEach((user, index) => {
         // Check if we need a new page
-        if (doc.y > 650) {
+        if (doc.y > 600) {
           doc.addPage();
         }
 
@@ -266,25 +272,40 @@ class PDFGenerator {
         doc.fontSize(9)
            .fillColor('#666')
            .font('Helvetica')
-           .text(`   • Triggered ${user.findings.size} different finding(s)`, { indent: 15 })
            .text(`   • Total Events: ${user.events.length}`, { indent: 15 })
-           .text(`   • IP Addresses Used: ${user.ips.size}`, { indent: 15 })
+           .text(`   • IP Addresses Used: ${user.ips.size}`, { indent: 15 });
+
+        if (user.ips.size > 0) {
+          const ipList = Array.from(user.ips).slice(0, 3).join(', ');
+          doc.fontSize(8)
+             .fillColor('#999')
+             .text(`     ${ipList}${user.ips.size > 3 ? ` (+${user.ips.size - 3} more)` : ''}`, { indent: 20 });
+        }
+
+        doc.fontSize(9)
+           .fillColor('#666')
            .text(`   • Geographic Locations: ${user.locations.size}`, { indent: 15 });
 
-        // Show top findings for this user
+        // Show ALL findings for this user
         if (user.events.length > 0) {
-          const findingCounts = this.getTopFindingsFromEvents(user.events, 3);
+          const findingCounts = this.getAllFindingsFromEvents(user.events);
           if (findingCounts.length > 0) {
             doc.fontSize(9)
                .fillColor('#1976D2')
                .font('Helvetica-Bold')
-               .text('   Top Findings:', { indent: 15 });
+               .text(`   Found in ${user.findings.size} Detection(s)/Hunt(s):`, { indent: 15 });
 
             findingCounts.forEach(f => {
+              const typeLabel = f.type === 'hunt' ? '[HUNT]' : '[DETECTION]';
+              const typeColor = f.type === 'hunt' ? '#9C27B0' : '#1976D2';
+
               doc.fontSize(8)
+                 .fillColor(typeColor)
+                 .font('Helvetica-Bold')
+                 .text(`     ${typeLabel} `, { continued: true, indent: 20 })
                  .fillColor('#666')
                  .font('Helvetica')
-                 .text(`     - ${f.finding} (${f.count} event${f.count > 1 ? 's' : ''})`, { indent: 20 });
+                 .text(`${f.finding} (${f.count} event${f.count > 1 ? 's' : ''})`);
             });
           }
         }
@@ -300,14 +321,20 @@ class PDFGenerator {
       doc.fontSize(18)
          .fillColor('#F44336')
          .font('Helvetica-Bold')
-         .text('Top Risk IP Addresses');
+         .text('Top Risk IP Addresses (Cross-User Analysis)');
+
+      doc.moveDown(0.3);
+      doc.fontSize(10)
+         .fillColor('#666')
+         .font('Helvetica')
+         .text('These IPs triggered multiple security detections/hunts affecting multiple users:');
 
       doc.moveDown(0.5);
 
       // Show top 5 IPs
       analysis.topRiskIPs.slice(0, 5).forEach((ip, index) => {
         // Check if we need a new page
-        if (doc.y > 700) {
+        if (doc.y > 650) {
           doc.addPage();
         }
 
@@ -326,13 +353,45 @@ class PDFGenerator {
         doc.fontSize(9)
            .fillColor('#666')
            .font('Helvetica')
-           .text(`   • Triggered ${ip.findings.size} different finding(s)`, { indent: 15 })
            .text(`   • Total Events: ${ip.events.length}`, { indent: 15 })
            .text(`   • Affected Users: ${ip.users.size}`, { indent: 15 });
 
+        if (ip.users.size > 0) {
+          const userList = Array.from(ip.users).slice(0, 3).join(', ');
+          doc.fontSize(8)
+             .fillColor('#999')
+             .text(`     ${userList}${ip.users.size > 3 ? ` (+${ip.users.size - 3} more)` : ''}`, { indent: 20 });
+        }
+
         if (ip.locations.size > 0) {
           const locations = Array.from(ip.locations).slice(0, 2).join('; ');
-          doc.text(`   • Locations: ${locations}`, { indent: 15 });
+          doc.fontSize(9)
+             .fillColor('#666')
+             .text(`   • Locations: ${locations}`, { indent: 15 });
+        }
+
+        // Show ALL findings for this IP
+        if (ip.events.length > 0) {
+          const findingCounts = this.getAllFindingsFromEvents(ip.events);
+          if (findingCounts.length > 0) {
+            doc.fontSize(9)
+               .fillColor('#1976D2')
+               .font('Helvetica-Bold')
+               .text(`   Found in ${ip.findings.size} Detection(s)/Hunt(s):`, { indent: 15 });
+
+            findingCounts.forEach(f => {
+              const typeLabel = f.type === 'hunt' ? '[HUNT]' : '[DETECTION]';
+              const typeColor = f.type === 'hunt' ? '#9C27B0' : '#1976D2';
+
+              doc.fontSize(8)
+                 .fillColor(typeColor)
+                 .font('Helvetica-Bold')
+                 .text(`     ${typeLabel} `, { continued: true, indent: 20 })
+                 .fillColor('#666')
+                 .font('Helvetica')
+                 .text(`${f.finding} (${f.count} event${f.count > 1 ? 's' : ''})`);
+            });
+          }
         }
 
         doc.moveDown(0.5);
@@ -398,13 +457,37 @@ class PDFGenerator {
     const findingCounts = {};
     events.forEach(event => {
       const finding = event.finding || 'Unknown';
-      findingCounts[finding] = (findingCounts[finding] || 0) + 1;
+      if (!findingCounts[finding]) {
+        findingCounts[finding] = {
+          finding,
+          count: 0,
+          type: event.findingType
+        };
+      }
+      findingCounts[finding].count++;
     });
 
-    return Object.entries(findingCounts)
-      .map(([finding, count]) => ({ finding, count }))
+    return Object.values(findingCounts)
       .sort((a, b) => b.count - a.count)
       .slice(0, limit);
+  }
+
+  getAllFindingsFromEvents(events) {
+    const findingCounts = {};
+    events.forEach(event => {
+      const finding = event.finding || 'Unknown';
+      if (!findingCounts[finding]) {
+        findingCounts[finding] = {
+          finding,
+          count: 0,
+          type: event.findingType
+        };
+      }
+      findingCounts[finding].count++;
+    });
+
+    return Object.values(findingCounts)
+      .sort((a, b) => b.count - a.count);
   }
 
   addFindingsDetail(doc, findings) {

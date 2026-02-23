@@ -268,41 +268,60 @@ class CorrelationAnalyzer {
   displayAnalysis(topRiskUsers, topRiskIPs, topRiskDevices) {
     // Top Risk Users
     if (topRiskUsers.length > 0) {
-      gui.log('\n{bold}{yellow-fg}👥 TOP RISK USERS{/yellow-fg}{/bold}\n');
+      gui.log('\n{bold}{yellow-fg}👥 TOP RISK USERS (Cross-Detection Analysis){/yellow-fg}{/bold}\n');
+      gui.log('{gray-fg}These users triggered multiple security detections/hunts across your environment:{/gray-fg}\n');
 
       topRiskUsers.slice(0, 5).forEach((user, index) => {
         gui.riskUser(index + 1, user.userId, user.riskLevel, user.riskScore);
-        gui.log(`   {gray-fg}🎯 Triggered ${user.findings.size} different finding(s){/gray-fg}`);
         gui.log(`   {gray-fg}📊 Total Events: ${user.events.length}{/gray-fg}`);
-        gui.log(`   {gray-fg}🌐 IP Addresses: ${user.ips.size}{/gray-fg}`);
-        gui.log(`   {gray-fg}📍 Locations: ${user.locations.size}{/gray-fg}`);
-
-        // Show top findings for this user
-        const findingCounts = this.getTopFindings(user.events, 3);
-        if (findingCounts.length > 0) {
-          gui.log('   {cyan-fg}🔝 Top Findings:{/cyan-fg}');
-          findingCounts.forEach(f => {
-            gui.log(`   {gray-fg}  - ${f.finding} (${f.count} event${f.count > 1 ? 's' : ''}){/gray-fg}`);
-          });
+        gui.log(`   {gray-fg}🌐 IP Addresses Used: ${user.ips.size}{/gray-fg}`);
+        if (user.ips.size > 0) {
+          const ipList = Array.from(user.ips).slice(0, 3).join(', ');
+          gui.log(`   {gray-fg}   └─ ${ipList}${user.ips.size > 3 ? ` (+${user.ips.size - 3} more)` : ''}{/gray-fg}`);
         }
+        gui.log(`   {gray-fg}📍 Geographic Locations: ${user.locations.size}{/gray-fg}`);
+        if (user.locations.size > 0) {
+          const locationList = Array.from(user.locations).slice(0, 2).join('; ');
+          gui.log(`   {gray-fg}   └─ ${locationList}${user.locations.size > 2 ? ' (+ more)' : ''}{/gray-fg}`);
+        }
+
+        // Show ALL findings for this user (not just top 3)
+        gui.log(`\n   {bold}{cyan-fg}🎯 Found in ${user.findings.size} Detection(s)/Hunt(s):{/cyan-fg}{/bold}`);
+        const findingCounts = this.getTopFindings(user.events, 999); // Get all findings
+        findingCounts.forEach(f => {
+          const typeIcon = this.getTypeIcon(f.type);
+          gui.log(`   {yellow-fg}${typeIcon} ${f.finding}{/yellow-fg} {gray-fg}(${f.count} event${f.count > 1 ? 's' : ''}){/gray-fg}`);
+        });
         gui.log('');
       });
     }
 
     // Top Risk IPs
     if (topRiskIPs.length > 0) {
-      gui.log('\n{bold}{yellow-fg}🌐 TOP RISK IP ADDRESSES{/yellow-fg}{/bold}\n');
+      gui.log('\n{bold}{yellow-fg}🌐 TOP RISK IP ADDRESSES (Cross-User Analysis){/yellow-fg}{/bold}\n');
+      gui.log('{gray-fg}These IPs triggered multiple security detections/hunts affecting multiple users:{/gray-fg}\n');
 
       topRiskIPs.slice(0, 5).forEach((ip, index) => {
         gui.riskIP(index + 1, ip.ipAddress, ip.riskLevel, ip.riskScore);
-        gui.log(`   {gray-fg}🎯 Triggered ${ip.findings.size} different finding(s){/gray-fg}`);
         gui.log(`   {gray-fg}📊 Total Events: ${ip.events.length}{/gray-fg}`);
         gui.log(`   {gray-fg}👥 Affected Users: ${ip.users.size}{/gray-fg}`);
+        if (ip.users.size > 0) {
+          const userList = Array.from(ip.users).slice(0, 3).join(', ');
+          gui.log(`   {gray-fg}   └─ ${userList}${ip.users.size > 3 ? ` (+${ip.users.size - 3} more)` : ''}{/gray-fg}`);
+        }
 
         if (ip.locations.size > 0) {
           const locations = Array.from(ip.locations).slice(0, 2).join('; ');
-          gui.log(`   {gray-fg}📍 Locations: ${locations}{/gray-fg}`);
+          gui.log(`   {gray-fg}📍 Locations: ${locations}${ip.locations.size > 2 ? ' (+ more)' : ''}{/gray-fg}`);
         }
+
+        // Show ALL findings for this IP
+        gui.log(`\n   {bold}{cyan-fg}🎯 Found in ${ip.findings.size} Detection(s)/Hunt(s):{/cyan-fg}{/bold}`);
+        const findingCounts = this.getIPFindings(ip.events);
+        findingCounts.forEach(f => {
+          const typeIcon = this.getTypeIcon(f.type);
+          gui.log(`   {yellow-fg}${typeIcon} ${f.finding}{/yellow-fg} {gray-fg}(${f.count} event${f.count > 1 ? 's' : ''}){/gray-fg}`);
+        });
         gui.log('');
       });
     }
@@ -329,13 +348,42 @@ class CorrelationAnalyzer {
   getTopFindings(events, limit) {
     const findingCounts = {};
     events.forEach(event => {
-      findingCounts[event.finding] = (findingCounts[event.finding] || 0) + 1;
+      const key = event.finding;
+      if (!findingCounts[key]) {
+        findingCounts[key] = {
+          finding: event.finding,
+          count: 0,
+          type: event.findingType
+        };
+      }
+      findingCounts[key].count++;
     });
 
-    return Object.entries(findingCounts)
-      .map(([finding, count]) => ({ finding, count }))
+    return Object.values(findingCounts)
       .sort((a, b) => b.count - a.count)
       .slice(0, limit);
+  }
+
+  getIPFindings(events) {
+    const findingCounts = {};
+    events.forEach(event => {
+      const key = event.finding;
+      if (!findingCounts[key]) {
+        findingCounts[key] = {
+          finding: event.finding,
+          count: 0,
+          type: event.findingType
+        };
+      }
+      findingCounts[key].count++;
+    });
+
+    return Object.values(findingCounts)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  getTypeIcon(type) {
+    return type === 'hunt' ? '🔍' : '🛡️';
   }
 
   getRiskColor(level) {
