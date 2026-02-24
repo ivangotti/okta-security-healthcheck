@@ -1,29 +1,26 @@
 # Okta Security Health Check 🔒
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/github-ivangotti%2Fokta--security--healthcheck-blue)](https://github.com/ivangotti/okta-security-healthcheck)
 
-A powerful Node.js application that executes security detection rules and threat hunts against your Okta tenant using the System Log API. This tool implements detection rules and threat hunting queries from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security threats in real-time.
+A powerful security scanner that executes detection rules and threat hunts against your Okta tenant using the System Log API. This tool implements detection rules and threat hunting queries from the official [Okta customer-detections repository](https://github.com/okta/customer-detections) to help identify potential security threats in real-time.
 
 ## 🚀 Features
 
-- **🎨 Beautiful Terminal GUI** - Interactive interface with fixed header, animated ASCII mascot, and black background scrolling output
+- **🎨 Interactive Terminal UI** - Full-screen interface with fixed header, animated owl mascot, and scrolling output
 - **43+ Security Checks** - Automatically executes 31+ detection rules and 12+ threat hunts
+- **📋 Enhanced Event Display** - Beautifully formatted events with box borders, contextual colors, and rich details
 - **Dynamic Updates** - Fetches latest detections and hunts from GitHub on every run
 - **Risk Correlation Analysis** - Automatically correlates events across findings to identify high-risk users and IPs
-- **PDF Report Generation** - Beautiful, professional PDF reports with findings and risk analysis
+- **PDF Report Generation** - Professional PDF reports with findings and risk analysis
 - **Intelligent Risk Scoring** - Calculates risk scores based on patterns, frequency, and severity
 - **Top Risk Entities** - Identifies top 10 risk users and IPs with detailed breakdown
 - **Colorful Output** - Rich emoji usage 🛡️🔍📊 and color-coded messages throughout
 - **Hunt vs Detection** - Clearly distinguishes between real-time detections and proactive threat hunts
 - **Smart Caching** - Falls back to cached rules if GitHub is unavailable
 - **Offline Mode** - Run scans using cached detection rules and hunts
-- **Interactive Controls** - Mouse and keyboard scrolling, ESC/Q to exit
 
 ## 🎯 What It Detects
-
-This tool scans for various security threats using both real-time detection rules and proactive threat hunting queries:
 
 ### Security Detections (31+ rules)
 | Category | Examples |
@@ -49,7 +46,6 @@ This tool scans for various security threats using both real-time detection rule
 
 ## 📋 Prerequisites
 
-- Node.js 14 or higher
 - An Okta tenant with admin access
 - Okta API token with `okta.logs.read` scope
 
@@ -96,44 +92,50 @@ cp config.json.example config.json
 
 **Note:** The token needs the `okta.logs.read` scope to access system logs.
 
-## 🎨 Terminal GUI
+## 🎨 Terminal UI
 
-The app features a beautiful, interactive terminal interface:
+The app features a beautiful, interactive terminal interface with a fixed header and scrolling content area.
 
 ### Header Section
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 🔒 Okta Security Healthcheck by Ivan Gotti     ,___,        │
-│ 📅 2026-02-23 ⏰ 14:30:45                      [o.o]         │
-│ 🌐 Scanning: your-company.okta.com              )::(         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│ [Black Background Scrolling Content]                        │
+│ 🔒 Okta Security Healthcheck by Ivan Gotti       ,___,      │
+│ 📅 2026-02-23 ⏰ 14:30:45                        [o.o]      │
+│ 🌐 Scanning: your-company.okta.com               )::(       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-- **Title & Branding** - App name with your name prominently displayed
-- **Live Date/Time** - Current date and time updated in header
-- **Okta Org URL** - Shows which tenant is being scanned (🌐 Scanning: domain.okta.com)
-- **Animated Owl Mascot** - Wise owl with 8 expressions (normal, happy, vigilant, wink, alert, sleepy, excited)
-- **Blue Header** - Professional blue background for header
-- **Black Content Area** - High contrast black background for log output
+- **Live Date/Time** - Current date and time updated every second
+- **Okta Org URL** - Shows which tenant is being scanned
+- **Animated Owl Mascot** - 8 expressions (normal, happy, vigilant, wink, alert, sleepy, excited)
 
-The owl symbolizes wisdom and vigilance - perfect for a security monitoring tool!
+### Enhanced Event Display
 
-### Scrolling Output Area
+Events are displayed with rich formatting, contextual colors, and comprehensive details:
 
-The main content area displays:
-- 🛡️ **Detections** - Shield emoji for security detections
-- 🔍 **Hunts** - Magnifying glass for threat hunts
-- ✓ **Success** - Green checkmarks for completed operations
-- ✗ **Error** - Red X for failures
-- ⚠ **Warning** - Yellow alerts
-- ℹ **Info** - Cyan information messages
-- 📋 **Events** - Structured event details with emojis
-- 🔴🟠🟡🟢 **Risk Levels** - Color-coded risk indicators (Critical/High/Moderate/Low)
-- 👥 **Users** - User correlation analysis
-- 🌐 **IPs** - IP address tracking
-- 📊 **Statistics** - Metrics and summaries
+```
+┌─ 📋 Event 1 ─────────────────────────────────
+│ ⏰ Time:       Feb 23, 2024, 14:30:45
+│ 📌 Event Type:  user.session.access_admin_app
+│ 👤 Actor:      compromised.user@example.com
+│   Display Name: John Doe
+│ 🌐 IP Address:  203.0.113.42
+│   🖥️  User Agent: Mozilla/5.0 (Windows NT 10.0...)
+│ 📍 Location:   Moscow, Moscow, Russia
+│   📱 Device: Computer
+│ ❌ Outcome:   FAILURE
+│   💬 Reason: VERIFICATION_ERROR
+│ 🎯 Target:     Okta Admin Console (AppInstance)
+│   🔗 Request: /admin/dashboard
+└───────────────────────────────────────────────────
+```
+
+**Color Coding:**
+- Event types in **magenta**
+- Actors in **green**
+- IP addresses in **cyan**
+- Locations in **yellow**
+- Outcomes with contextual emojis: ✅ SUCCESS, ❌ FAILURE, 🚫 DENY
 
 ### Interactive Controls
 
@@ -142,11 +144,9 @@ The main content area displays:
 - **Page Up/Down** - Scroll by page
 - **ESC or Q** - Exit the application
 
-The GUI stays open after scanning completes so you can review all results. Simply press ESC or Q when done!
-
 ## 💻 Usage
 
-> **Note:** The app automatically fetches the latest detection rules and threat hunts from GitHub on every run, ensuring you always have the most up-to-date security checks.
+> **Note:** The app automatically fetches the latest detection rules and threat hunts from GitHub on every run.
 
 ### Run All Detections and Hunts
 ```bash
@@ -173,106 +173,17 @@ npm start -- --since "2024-02-01T00:00:00Z"
 ```bash
 npm start -- --offline
 ```
-Use this to skip GitHub fetch and use cached detection rules and hunts.
 
 ### Show Help
 ```bash
 npm start -- --help
 ```
 
-## 📊 Output Example
-
-For each detection or hunt, the tool displays a type label and details:
-
-```
-================================================================================
-[1/43] [DETECTION] New Okta API Token Created
-================================================================================
-
-Description:
-  Detects a new Okta API token being created by an Okta Administrator.
-  An adversary with access to an admin account may create an API token
-  to maintain persistence in the environment.
-
-Executing query...
-
-Results: 6 event(s) found
-
-⚠️  FINDINGS DETECTED
-
-Event 1:
-  Time: 2026-02-11T17:32:49.940Z
-  Event Type: system.api_token.create
-  Actor: admin@company.com
-  IP Address: 192.168.1.100
-  Location: San Francisco, CA, United States
-  Outcome: SUCCESS
-  Target: HealthCheck
-
-Analysis:
-  ⚠️  6 event(s) matching this detection pattern
-  Review these events to determine if they represent genuine security concerns
-
-False Positives:
-  - Legitimate new Okta API tokens being created for approved integrations
-
-================================================================================
-SECURITY SCAN SUMMARY
-================================================================================
-
-Detections Executed: 43
-✓ Successful: 43
-
-Security Findings: 7 check(s) triggered
-Total Events: 159
-
-⚠️  DETECTIONS WITH FINDINGS:
-
-1. New Okta API Token Created
-   Events Found: 6
-   Tactic: Persistence
-
-2. ThreatInsight - Password Spray
-   Events Found: 100
-   Tactic: Credential Access
-
-3. OAuth Client Secret Read
-   Events Found: 46
-   Tactic: Credential Access
-
-⚠️  Action Required: Review the findings above for potential security issues
-   Scroll up to see detailed event information for each detection
-```
-
-## 🎨 Output Features
-
-- **Type distinction** - Color-coded labels for [DETECTION] (cyan) vs [HUNT] (magenta)
-- **Color-coded results** for easy scanning
-- **Bold cyan labels** with white values for clarity
-- **Outcome highlighting**:
-  - 🟢 SUCCESS (green)
-  - 🔴 FAILURE (red)
-  - ⚪ DENY (white)
-- **Comprehensive event details** including time, actor, IP, location
-- **MITRE ATT&CK tactics** for threat context
-- **False positive guidance** to reduce alert fatigue
-
 ## 🔍 Risk Correlation Analysis
 
-After all detections and hunts complete, the app performs intelligent correlation analysis to identify the highest-risk entities in your environment.
-
-### How It Works
-
-The correlation engine analyzes all security events and groups them by:
-
-1. **User Identity** - Tracks all events per user account
-2. **IP Address** - Identifies suspicious IPs affecting multiple users
-3. **Device** - Correlates events from the same device
-4. **Geographic Location** - Detects impossible travel patterns
+After all detections and hunts complete, the app performs intelligent correlation analysis to identify the highest-risk entities.
 
 ### Risk Scoring Algorithm
-
-Each entity receives a risk score based on multiple factors:
 
 **User Risk Factors:**
 - Number of different security findings triggered (20 points each)
@@ -280,23 +191,15 @@ Each entity receives a risk score based on multiple factors:
 - Multiple IP addresses used (10 points per IP - compromise indicator)
 - Multiple geographic locations (15 points per location - impossible travel)
 - Failed/denied authentication attempts (3 points each)
-- Diverse event types (5 points per type - broad attack surface)
-
-**IP Risk Factors:**
-- Number of different security findings (20 points each)
-- Total security events (2 points each)
-- Multiple user accounts (25 points per user - shared compromise)
-- Multiple geographic locations (15 points per location - proxy/VPN)
 
 **Risk Levels:**
-- **CRITICAL** (150+ points) - Immediate investigation required
-- **HIGH** (100-149 points) - Prompt review recommended
-- **MODERATE** (50-99 points) - Monitor closely
-- **LOW** (<50 points) - Normal activity
+- 🔴 **CRITICAL** (150+ points) - Immediate investigation required
+- 🟠 **HIGH** (100-149 points) - Prompt review recommended
+- 🟡 **MODERATE** (50-99 points) - Monitor closely
+- 🟢 **LOW** (<50 points) - Normal activity
 
 ### Output
 
-The analysis displays:
 - **Top 10 Risk Users** with detailed breakdown
 - **Top 10 Risk IPs** with affected user counts
 - **Correlation Statistics** (total users, IPs, devices analyzed)
@@ -304,53 +207,14 @@ The analysis displays:
 
 ## 📄 PDF Report
 
-After each scan completes, a beautiful PDF report is automatically generated with the filename: `okta-security-scan-YYYY-MM-DD.pdf`
+After each scan, a PDF report is automatically generated: `okta-security-scan-YYYY-MM-DD.pdf`
 
 ### Report Contents
 
-**Title Page**
-- Scan date and time
-- Okta tenant information
-- Query period
-
-**Executive Summary**
-- Key metrics (detections executed, triggered, total events)
-- Risk assessment (LOW/MODERATE/HIGH) with color coding
-- Summary of key findings
-
-**Risk Correlation Analysis** ⭐ NEW
-- Top risk users with scores and risk levels
-- Top risk IP addresses with affected user counts
-- Correlation statistics and patterns
-- Risk level distribution breakdown
-- Detailed event breakdown per entity
-
-**Detailed Findings**
-- Each detection with findings gets a dedicated section
-- Detection/hunt type label and description
-- MITRE ATT&CK tactics
-- Event details including:
-  - Timestamp
-  - Actor (user/service)
-  - IP address and geolocation
-  - Outcome (SUCCESS/FAILURE/DENY)
-  - Target resources
-- False positive guidance
-
-**Professional Formatting**
-- Clean typography with Helvetica fonts
-- Color-coded risk indicators (red for CRITICAL, orange for HIGH)
-- Statistics boxes with visual appeal
-- Page headers and footers with page numbers
-- Organized sections for easy navigation
-
-The PDF is perfect for:
-- Identifying compromised accounts and IPs
-- Prioritizing security investigations
-- Sharing with security teams
-- Compliance documentation
-- Executive reporting
-- Historical tracking of security posture
+- **Executive Summary** - Key metrics and risk assessment
+- **Risk Correlation Analysis** - Top risk users and IPs with scores
+- **Detailed Findings** - Each detection with events, MITRE ATT&CK tactics, and false positive guidance
+- **Professional Formatting** - Color-coded risk indicators, clean typography, page numbers
 
 ## 🏗️ Architecture
 
@@ -361,23 +225,22 @@ sec-healthcheck/
 │   ├── oktaClient.js         # Okta API wrapper
 │   ├── detectionLoader.js    # GitHub detection fetcher
 │   ├── detectionRunner.js    # Detection executor
+│   ├── terminalGui.js        # Blessed-based terminal UI
 │   ├── correlationAnalyzer.js # Risk correlation engine
 │   └── pdfGenerator.js       # PDF report generator
 ├── config.json.example       # Configuration template
-├── package.json             # Dependencies
-├── README.md               # This file
-└── CLAUDE.md              # Developer documentation
+├── package.json              # Dependencies
+└── README.md                 # This file
 ```
 
 ### How It Works
 
-1. **Detection Loader** fetches YAML files from both `/detections` and `/hunts` directories in [Okta customer-detections](https://github.com/okta/customer-detections)
-2. **Parser** extracts OIE-compatible filter queries (ignores Splunk/complex formats) and tags each with type (detection vs hunt)
+1. **Detection Loader** fetches YAML files from `/detections` and `/hunts` directories in [Okta customer-detections](https://github.com/okta/customer-detections)
+2. **Parser** extracts OIE-compatible filter queries and tags each with type (detection vs hunt)
 3. **Okta Client** executes each query against your tenant's System Log API
-4. **Runner** displays results with comprehensive context, analysis, and type distinction
+4. **Terminal GUI** displays results with comprehensive context and enhanced formatting
 5. **Correlation Analyzer** examines all events to identify high-risk users, IPs, and devices
-6. **PDF Generator** creates a beautiful report with findings and risk analysis
-7. **Smart Caching** saves all rules locally as backup
+6. **PDF Generator** creates a professional report with findings and risk analysis
 
 ## 🔒 Security Considerations
 
@@ -409,6 +272,6 @@ This tool is provided as-is for security monitoring purposes. Always review and 
 
 ---
 
-**Built with ❤️ for Okta security professionals**
+**Built with ❤️ for Okta security professionals by Ivan Gotti**
 
 [![Star on GitHub](https://img.shields.io/github/stars/ivangotti/okta-security-healthcheck?style=social)](https://github.com/ivangotti/okta-security-healthcheck)
