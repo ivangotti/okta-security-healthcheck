@@ -442,8 +442,22 @@ These entities may warrant closer review as they are associated with diverse sec
       const typeColor = finding.sourceType === 'hunt' ? 'rgb(156, 39, 176)' : 'rgb(49, 130, 206)';
       const title = this.escapeTypst(finding.title);
       const description = this.escapeTypst(finding.description || 'No description available');
-      const tactic = this.escapeTypst(finding.threat?.Tactic || 'Uncategorized');
-      const technique = this.escapeTypst(finding.threat?.Technique || 'N/A');
+      const tacticRaw = finding.threat?.Tactic;
+      const tactic = this.escapeTypst(
+        Array.isArray(tacticRaw) ? tacticRaw.join(', ') : (tacticRaw || 'Uncategorized')
+      );
+
+      const techniqueRaw = finding.threat?.Technique;
+      let techniqueStr = 'N/A';
+      if (Array.isArray(techniqueRaw)) {
+        techniqueStr = techniqueRaw.join(', ');
+      } else if (typeof techniqueRaw === 'object' && techniqueRaw !== null) {
+        // Handle object with id/name properties
+        techniqueStr = techniqueRaw.id || techniqueRaw.name || JSON.stringify(techniqueRaw);
+      } else if (techniqueRaw) {
+        techniqueStr = String(techniqueRaw);
+      }
+      const technique = this.escapeTypst(techniqueStr);
 
       content += `
 == ${index + 1}. #text(fill: ${typeColor})[[${typeLabel}]] ${title}
