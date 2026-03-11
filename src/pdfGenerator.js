@@ -293,16 +293,18 @@ class PDFGenerator {
   generateTypstDocument(findings, config, stats, timestamp) {
     const domain = this.escapeTypst(config.okta?.domain || 'Unknown');
 
-    // Format the analysis period as a readable date range
+    // Format the analysis period as a readable date range (use UTC to avoid timezone shifts)
     const sinceRaw = config.query?.since;
     let analysisPeriod;
     if (sinceRaw) {
       const sinceDate = new Date(sinceRaw);
       const sinceFormatted = sinceDate.toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
+        year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'UTC'
       });
       const nowFormatted = timestamp.toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
+        year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'UTC'
       });
       analysisPeriod = `${sinceFormatted} to ${nowFormatted}`;
     } else {
