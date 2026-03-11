@@ -447,18 +447,6 @@ These entities may warrant closer review as they are associated with diverse sec
         Array.isArray(tacticRaw) ? tacticRaw.join(', ') : (tacticRaw || 'Uncategorized')
       );
 
-      const techniqueRaw = finding.threat?.Technique;
-      let techniqueStr = 'N/A';
-      if (Array.isArray(techniqueRaw)) {
-        techniqueStr = techniqueRaw.join(', ');
-      } else if (typeof techniqueRaw === 'object' && techniqueRaw !== null) {
-        // Handle object with id/name properties
-        techniqueStr = techniqueRaw.id || techniqueRaw.name || JSON.stringify(techniqueRaw);
-      } else if (techniqueRaw) {
-        techniqueStr = String(techniqueRaw);
-      }
-      const technique = this.escapeTypst(techniqueStr);
-
       content += `
 == ${index + 1}. #text(fill: ${typeColor})[[${typeLabel}]] ${title}
 
@@ -472,7 +460,6 @@ These entities may warrant closer review as they are associated with diverse sec
   inset: 4pt,
   [*Events Found:*], [${finding.events?.length || 0}],
   [*MITRE Tactic:*], [${tactic}],
-  [*MITRE Technique:*], [${technique}],
 )
 
 `;
