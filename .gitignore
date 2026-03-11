@@ -1,7 +1,33 @@
+# Dependencies
 node_modules/
+
+# Configuration with secrets
 config.json
 .env
+.env.*
+*.local
+
+# Cached detection rules
 detections/
+
+# Generated files
 *.log
 *.pdf
+reports/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Security - prevent accidental exposure
+*.key
+*.pem
+*.crt
+credentials.*
+secrets.*
