@@ -95,7 +95,24 @@ class PDFGenerator {
 
   generateTypstDocument(findings, config, stats, timestamp) {
     const domain = this.escapeTypst(config.okta?.domain || 'Unknown');
-    const since = this.escapeTypst(config.query?.since || 'Last 90 days');
+
+    // Format the analysis period as a readable date range
+    const sinceRaw = config.query?.since;
+    let analysisPeriod;
+    if (sinceRaw) {
+      const sinceDate = new Date(sinceRaw);
+      const sinceFormatted = sinceDate.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+      const nowFormatted = timestamp.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+      analysisPeriod = `${sinceFormatted} to ${nowFormatted}`;
+    } else {
+      analysisPeriod = 'Last 90 days';
+    }
+    const since = this.escapeTypst(analysisPeriod);
+
     const dateFormatted = timestamp.toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
