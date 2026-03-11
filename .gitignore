@@ -13,7 +13,9 @@ detections/
 # Generated files
 *.log
 *.pdf
+*.typ
 reports/
+results/
 
 # OS files
 .DS_Store

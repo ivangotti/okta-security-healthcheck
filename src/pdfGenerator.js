@@ -20,21 +20,218 @@ class PDFGenerator {
   async generateReport(findings, config) {
     const timestamp = new Date();
     const dateStr = timestamp.toISOString().split('T')[0];
-    const typstFile = path.join(process.cwd(), `report-${dateStr}.typ`);
-    const pdfFile = path.join(process.cwd(), `okta-security-report-${dateStr}.pdf`);
+
+    // Create results folder if it doesn't exist
+    const resultsDir = path.join(process.cwd(), 'results');
+    if (!fs.existsSync(resultsDir)) {
+      fs.mkdirSync(resultsDir, { recursive: true });
+    }
+
+    const typstFile = path.join(resultsDir, `report-${dateStr}.typ`);
+    const pdfFile = path.join(resultsDir, `okta-security-report-${dateStr}.pdf`);
+    const rawFile = path.join(resultsDir, `okta-security-raw-${dateStr}.txt`);
 
     const stats = this.calculateStatistics(findings);
     const typstContent = this.generateTypstDocument(findings, config, stats, timestamp);
 
     fs.writeFileSync(typstFile, typstContent, 'utf8');
 
+    // Generate raw text file with all events for deep investigation
+    const rawContent = this.generateRawTextFile(findings, config, stats, timestamp);
+    fs.writeFileSync(rawFile, rawContent, 'utf8');
+
     try {
       execSync(`typst compile "${typstFile}" "${pdfFile}"`, { stdio: 'pipe' });
       fs.unlinkSync(typstFile);
-      return pdfFile;
+      return { pdfFile, rawFile };
     } catch (error) {
       throw new Error(`Typst compilation failed: ${error.message}`);
     }
+  }
+
+  generateRawTextFile(findings, config, stats, timestamp) {
+    const domain = config.okta?.domain || 'Unknown';
+    const sinceRaw = config.query?.since;
+    let analysisPeriod = 'Last 90 days';
+    if (sinceRaw) {
+      const sinceDate = new Date(sinceRaw);
+      analysisPeriod = `${sinceDate.toISOString()} to ${timestamp.toISOString()}`;
+    }
+
+    let content = '';
+    content += '='.repeat(80) + '\n';
+    content += 'OKTA SECURITY ASSESSMENT - RAW EVENT DATA\n';
+    content += '='.repeat(80) + '\n\n';
+    content += `Generated: ${timestamp.toISOString()}\n`;
+    content += `Okta Domain: ${domain}\n`;
+    content += `Analysis Period: ${analysisPeriod}\n`;
+    content += `Total Checks: ${stats.totalChecks}\n`;
+    content += `Findings with Events: ${stats.triggeredCount}\n`;
+    content += `Total Events: ${stats.totalEvents}\n`;
+    content += '\n' + '='.repeat(80) + '\n\n';
+
+    // Iterate through all findings with events
+    stats.triggered.forEach((finding, index) => {
+      const typeLabel = finding.sourceType === 'hunt' ? 'HUNT' : 'DETECTION';
+      content += '-'.repeat(80) + '\n';
+      content += `[${typeLabel}] ${finding.title}\n`;
+      content += '-'.repeat(80) + '\n';
+      content += `Description: ${finding.description || 'N/A'}\n`;
+      content += `MITRE Tactic: ${finding.threat?.Tactic || 'N/A'}\n`;
+      content += `Events Count: ${finding.events?.length || 0}\n`;
+      content += `Query: ${finding.query || 'N/A'}\n`;
+      content += '\n';
+
+      if (finding.events && finding.events.length > 0) {
+        content += 'ALL EVENTS:\n';
+        content += '~'.repeat(40) + '\n\n';
+
+        finding.events.forEach((event, eventIdx) => {
+          content += `--- Event ${eventIdx + 1} ---\n`;
+          content += `Timestamp: ${event.published || 'N/A'}\n`;
+          content += `UUID: ${event.uuid || 'N/A'}\n`;
+          content += `EventType: ${event.eventType || 'N/A'}\n`;
+          content += `DisplayMessage: ${event.displayMessage || 'N/A'}\n`;
+          content += '\n';
+
+          // Actor info
+          content += '[Actor]\n';
+          content += `  ID: ${event.actor?.id || 'N/A'}\n`;
+          content += `  Type: ${event.actor?.type || 'N/A'}\n`;
+          content += `  AlternateId: ${event.actor?.alternateId || 'N/A'}\n`;
+          content += `  DisplayName: ${event.actor?.displayName || 'N/A'}\n`;
+          content += '\n';
+
+          // Client info
+          content += '[Client]\n';
+          content += `  IP Address: ${event.client?.ipAddress || 'N/A'}\n`;
+          content += `  UserAgent (Raw): ${event.client?.userAgent?.rawUserAgent || 'N/A'}\n`;
+          content += `  UserAgent (OS): ${event.client?.userAgent?.os || 'N/A'}\n`;
+          content += `  UserAgent (Browser): ${event.client?.userAgent?.browser || 'N/A'}\n`;
+          content += `  Device: ${event.client?.device || 'N/A'}\n`;
+          content += `  Zone: ${event.client?.zone || 'N/A'}\n`;
+          if (event.client?.geographicalContext) {
+            const geo = event.client.geographicalContext;
+            content += `  Geo City: ${geo.city || 'N/A'}\n`;
+            content += `  Geo State: ${geo.state || 'N/A'}\n`;
+            content += `  Geo Country: ${geo.country || 'N/A'}\n`;
+            content += `  Geo Postal: ${geo.postalCode || 'N/A'}\n`;
+          }
+          content += '\n';
+
+          // Outcome
+          content += '[Outcome]\n';
+          content += `  Result: ${event.outcome?.result || 'N/A'}\n`;
+          content += `  Reason: ${event.outcome?.reason || 'N/A'}\n`;
+          content += '\n';
+
+          // Security Context
+          if (event.securityContext) {
+            content += '[Security Context]\n';
+            content += `  ASNumber: ${event.securityContext.asNumber || 'N/A'}\n`;
+            content += `  ASOrg: ${event.securityContext.asOrg || 'N/A'}\n`;
+            content += `  ISP: ${event.securityContext.isp || 'N/A'}\n`;
+            content += `  Domain: ${event.securityContext.domain || 'N/A'}\n`;
+            content += `  IsProxy: ${event.securityContext.isProxy || 'N/A'}\n`;
+            content += '\n';
+          }
+
+          // Debug Context
+          if (event.debugContext?.debugData) {
+            content += '[Debug Data]\n';
+            const debugData = event.debugContext.debugData;
+            Object.keys(debugData).forEach(key => {
+              const value = debugData[key];
+              if (typeof value === 'object') {
+                content += `  ${key}: ${JSON.stringify(value)}\n`;
+              } else {
+                content += `  ${key}: ${value}\n`;
+              }
+            });
+            content += '\n';
+          }
+
+          // Authentication Context
+          if (event.authenticationContext) {
+            content += '[Authentication Context]\n';
+            const auth = event.authenticationContext;
+            content += `  AuthenticationProvider: ${auth.authenticationProvider || 'N/A'}\n`;
+            content += `  AuthenticationStep: ${auth.authenticationStep || 'N/A'}\n`;
+            content += `  CredentialProvider: ${auth.credentialProvider || 'N/A'}\n`;
+            content += `  CredentialType: ${auth.credentialType || 'N/A'}\n`;
+            content += `  ExternalSessionId: ${auth.externalSessionId || 'N/A'}\n`;
+            content += `  Interface: ${auth.interface || 'N/A'}\n`;
+            content += '\n';
+          }
+
+          // Target (if any)
+          if (event.target && event.target.length > 0) {
+            content += '[Targets]\n';
+            event.target.forEach((t, tIdx) => {
+              content += `  Target ${tIdx + 1}:\n`;
+              content += `    ID: ${t.id || 'N/A'}\n`;
+              content += `    Type: ${t.type || 'N/A'}\n`;
+              content += `    AlternateId: ${t.alternateId || 'N/A'}\n`;
+              content += `    DisplayName: ${t.displayName || 'N/A'}\n`;
+            });
+            content += '\n';
+          }
+
+          // Transaction
+          if (event.transaction) {
+            content += '[Transaction]\n';
+            content += `  ID: ${event.transaction.id || 'N/A'}\n`;
+            content += `  Type: ${event.transaction.type || 'N/A'}\n`;
+            content += '\n';
+          }
+
+          content += '\n';
+        });
+      }
+
+      content += '\n';
+    });
+
+    // Add correlation analysis summary
+    if (stats.riskUsers.length > 0 || stats.riskIPs.length > 0) {
+      content += '='.repeat(80) + '\n';
+      content += 'CORRELATION ANALYSIS SUMMARY\n';
+      content += '='.repeat(80) + '\n\n';
+
+      if (stats.riskUsers.length > 0) {
+        content += 'TOP RISK USERS:\n';
+        content += '-'.repeat(40) + '\n';
+        stats.riskUsers.forEach((user, idx) => {
+          content += `${idx + 1}. ${user.user}\n`;
+          content += `   Risk Score: ${user.riskScore}\n`;
+          content += `   Risk Level: ${user.riskLevel}\n`;
+          content += `   Event Count: ${user.eventCount}\n`;
+          content += `   Findings: ${Array.from(user.findings).join(', ')}\n`;
+          content += `   IPs: ${Array.from(user.ips).join(', ')}\n`;
+          content += '\n';
+        });
+      }
+
+      if (stats.riskIPs.length > 0) {
+        content += '\nTOP RISK IPs:\n';
+        content += '-'.repeat(40) + '\n';
+        stats.riskIPs.forEach((ip, idx) => {
+          content += `${idx + 1}. ${ip.ip}\n`;
+          content += `   Risk Score: ${ip.riskScore}\n`;
+          content += `   Risk Level: ${ip.riskLevel}\n`;
+          content += `   Event Count: ${ip.eventCount}\n`;
+          content += `   Findings: ${Array.from(ip.findings).join(', ')}\n`;
+          content += `   Users: ${Array.from(ip.users).join(', ')}\n`;
+          content += '\n';
+        });
+      }
+    }
+
+    content += '\n' + '='.repeat(80) + '\n';
+    content += 'END OF RAW EVENT DATA\n';
+    content += '='.repeat(80) + '\n';
+
+    return content;
   }
 
   calculateStatistics(findings) {

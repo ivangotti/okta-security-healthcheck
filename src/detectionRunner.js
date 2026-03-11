@@ -63,15 +63,16 @@ class DetectionRunner {
     const correlationAnalysis = this.correlationAnalyzer.analyzeFindings(results.detectionResults);
     results.correlationAnalysis = correlationAnalysis;
 
-    // Generate PDF report
-    gui.section('Generating PDF Report');
-    gui.progress('Creating PDF document');
+    // Generate reports
+    gui.section('Generating Reports');
+    gui.progress('Creating PDF and raw data files');
 
     try {
-      const pdfPath = await this.pdfGenerator.generateReport(results, this.config);
-      gui.success(`PDF report generated: ${pdfPath}`);
+      const { pdfFile, rawFile } = await this.pdfGenerator.generateReport(results, this.config);
+      gui.success(`PDF report generated: ${pdfFile}`);
+      gui.success(`Raw event data: ${rawFile}`);
     } catch (error) {
-      gui.error(`Failed to generate PDF: ${error.message}`);
+      gui.error(`Failed to generate reports: ${error.message}`);
     }
 
     return results;
