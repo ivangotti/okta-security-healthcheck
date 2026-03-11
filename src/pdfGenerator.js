@@ -501,7 +501,7 @@ ${this.generateCorrelationSummary(stats)}
 // DETAILED FINDINGS
 // ═══════════════════════════════════════════════════════════════════════════
 
-${this.generateDetailedFindings(stats)}
+${this.generateDetailedFindings(stats, config)}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CORRELATION ANALYSIS
@@ -627,10 +627,15 @@ These entities may warrant closer review as they are associated with diverse sec
     return content;
   }
 
-  generateDetailedFindings(stats) {
+  generateDetailedFindings(stats, config) {
     if (stats.triggered.length === 0) {
       return '';
     }
+
+    // Get sample events limit from config (default: 3, "all" for all events)
+    const sampleEventsSetting = config.report?.sampleEvents;
+    const showAllEvents = sampleEventsSetting === 'all' || sampleEventsSetting === 'ALL';
+    const sampleLimit = showAllEvents ? Infinity : (parseInt(sampleEventsSetting) || 3);
 
     let content = `= Detailed Findings\n\n`;
 
@@ -663,10 +668,12 @@ These entities may warrant closer review as they are associated with diverse sec
 
       // Sample events with detailed security attributes
       if (finding.events && finding.events.length > 0) {
-        content += `=== Sample Events\n\n`;
+        const eventsToShow = showAllEvents ? finding.events.length : Math.min(sampleLimit, finding.events.length);
+        const sectionTitle = showAllEvents ? 'All Events' : 'Sample Events';
+        content += `=== ${sectionTitle}\n\n`;
 
-        // Show detailed view for first 3 events
-        finding.events.slice(0, 3).forEach((event, idx) => {
+        // Show detailed view for events based on config
+        finding.events.slice(0, sampleLimit).forEach((event, idx) => {
           const timestamp = new Date(event.published).toLocaleString('en-US', {
             month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
           });
@@ -718,8 +725,8 @@ These entities may warrant closer review as they are associated with diverse sec
 `;
         });
 
-        if (finding.events.length > 3) {
-          content += `#text(size: 9pt, fill: rgb(113, 128, 150), style: "italic")[Showing 3 of ${finding.events.length} events]\n\n`;
+        if (!showAllEvents && finding.events.length > sampleLimit) {
+          content += `#text(size: 9pt, fill: rgb(113, 128, 150), style: "italic")[Showing ${sampleLimit} of ${finding.events.length} events]\n\n`;
         }
 
         // Add field explanations

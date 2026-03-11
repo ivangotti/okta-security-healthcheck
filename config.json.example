@@ -6,5 +6,8 @@
   "query": {
     "since": "2024-01-01T00:00:00Z",
     "limit": 100
+  },
+  "report": {
+    "sampleEvents": 3
   }
 }
