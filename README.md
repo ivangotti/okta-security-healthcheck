@@ -48,8 +48,15 @@ A powerful security scanner that executes detection rules and threat hunts again
 
 - An Okta tenant with admin access
 - Okta API token with `okta.logs.read` scope
+- Typst (for PDF report generation)
 
 ## 🔧 Installation
+
+### Install Typst (required for PDF reports)
+
+```bash
+brew install typst
+```
 
 1. **Clone the repository**
 ```bash
