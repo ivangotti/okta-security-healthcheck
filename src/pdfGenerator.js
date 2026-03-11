@@ -281,54 +281,19 @@ class PDFGenerator {
 
 This report presents the results of an automated security assessment conducted against the Okta tenant *${domain}*. The assessment executed ${stats.totalChecks} security checks (${stats.detectionsCount} detection rules and ${stats.huntsCount} threat hunts) against the System Log API.
 
-== Assessment Overview
-
-#table(
-  columns: (1fr, auto),
-  stroke: rgb(226, 232, 240),
-  inset: 8pt,
-  fill: (_, row) => if row == 0 { rgb(247, 250, 252) } else { white },
-  [*Metric*], [*Value*],
-  [Total Security Checks], [${stats.totalChecks}],
-  [Detection Rules Executed], [${stats.detectionsCount}],
-  [Threat Hunts Executed], [${stats.huntsCount}],
-  [Checks with Findings], [${stats.triggeredCount}],
-  [Total Events Collected], [${stats.totalEvents}],
-  [Unique Users in Findings], [${stats.riskUsers.length}],
-  [Unique IPs in Findings], [${stats.riskIPs.length}],
-)
-
-${stats.triggeredCount > 0 ? `
-== Summary of Findings
-
-${stats.triggeredCount} out of ${stats.totalChecks} security checks returned events. These findings are grouped by MITRE ATT&CK tactic below.
-
-${this.generateTacticSummary(stats)}
-` : `
-== Summary
-
-No events were returned by any of the ${stats.totalChecks} security checks during the analysis period. This indicates that the specific detection patterns and threat hunt queries did not match any activities in the system logs.
-`}
-
 ${this.generateCorrelationSummary(stats)}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// FINDINGS BY CATEGORY
-// ═══════════════════════════════════════════════════════════════════════════
-
-${this.generateFindingsByCategory(stats)}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CORRELATION ANALYSIS
-// ═══════════════════════════════════════════════════════════════════════════
-
-${this.generateCorrelationSection(stats)}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DETAILED FINDINGS
 // ═══════════════════════════════════════════════════════════════════════════
 
 ${this.generateDetailedFindings(stats)}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CORRELATION ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+${this.generateCorrelationSection(stats)}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // APPENDIX
@@ -363,28 +328,6 @@ This report presents raw findings from automated security checks. Events returne
 `;
   }
 
-  generateTacticSummary(stats) {
-    const tactics = Object.entries(stats.byTactic);
-    if (tactics.length === 0) return '';
-
-    let content = `
-#table(
-  columns: (1fr, auto, auto),
-  stroke: rgb(226, 232, 240),
-  inset: 8pt,
-  fill: (_, row) => if row == 0 { rgb(247, 250, 252) } else { white },
-  [*MITRE ATT&CK Tactic*], [*Checks*], [*Events*],
-`;
-
-    tactics.forEach(([tactic, findings]) => {
-      const totalEvents = findings.reduce((sum, f) => sum + (f.events?.length || 0), 0);
-      content += `  [${this.escapeTypst(tactic)}], [${findings.length}], [${totalEvents}],\n`;
-    });
-
-    content += `)`;
-    return content;
-  }
-
   generateCorrelationSummary(stats) {
     if (stats.usersInMultiple.length === 0 && stats.ipsInMultiple.length === 0) {
       return '';
@@ -407,36 +350,6 @@ This report presents raw findings from automated security checks. Events returne
 
 These entities may warrant closer review as they are associated with diverse security-relevant activities.
 `;
-
-    return content;
-  }
-
-  generateFindingsByCategory(stats) {
-    const tactics = Object.entries(stats.byTactic);
-    if (tactics.length === 0) return '';
-
-    let content = `= Findings by Category\n\n`;
-
-    tactics.forEach(([tactic, findings]) => {
-      const totalEvents = findings.reduce((sum, f) => sum + (f.events?.length || 0), 0);
-
-      content += `
-== ${this.escapeTypst(tactic)}
-
-#text(size: 10pt, fill: rgb(113, 128, 150))[${findings.length} check(s) returned ${totalEvents} event(s)]
-
-`;
-
-      findings.forEach(finding => {
-        const typeLabel = finding.sourceType === 'hunt' ? 'Hunt' : 'Detection';
-        const title = this.escapeTypst(finding.title);
-        const eventCount = finding.events?.length || 0;
-
-        content += `- *[${typeLabel}]* ${title} — ${eventCount} event(s)\n`;
-      });
-
-      content += '\n';
-    });
 
     return content;
   }
