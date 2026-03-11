@@ -477,33 +477,88 @@ These entities may warrant closer review as they are associated with diverse sec
 
 `;
 
-      // Sample events
+      // Sample events with detailed security attributes
       if (finding.events && finding.events.length > 0) {
         content += `=== Sample Events\n\n`;
-        content += `#table(
-  columns: (auto, 1fr, auto, auto),
+
+        // Show detailed view for first 3 events
+        finding.events.slice(0, 3).forEach((event, idx) => {
+          const timestamp = new Date(event.published).toLocaleString('en-US', {
+            month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+          });
+
+          content += `
+#block(
+  width: 100%,
   stroke: rgb(226, 232, 240),
-  inset: 6pt,
-  fill: (_, row) => if row == 0 { rgb(247, 250, 252) } else { white },
-  [*Time*], [*Actor*], [*IP*], [*Outcome*],
+  inset: 10pt,
+  radius: 4pt,
+  fill: rgb(252, 252, 253)
+)[
+  *Event ${idx + 1}* — ${this.escapeTypst(timestamp)}
+
+  #table(
+    columns: (auto, 1fr),
+    stroke: none,
+    inset: 3pt,
+    [*Actor:*], [${this.escapeTypst(event.actor?.alternateId || 'N/A')}],
+    [*IP Address:*], [${this.escapeTypst(event.client?.ipAddress || 'N/A')}],
+    [*Result:*], [${this.escapeTypst(event.outcome?.result || 'N/A')}],
+    [*Reason:*], [${this.escapeTypst(event.outcome?.reason || 'N/A')}],
 `;
 
-        finding.events.slice(0, 5).forEach(event => {
-          const timestamp = new Date(event.published).toLocaleString('en-US', {
-            month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
-          });
-          const actor = this.escapeTypst((event.actor?.alternateId || 'N/A').substring(0, 30));
-          const ip = this.escapeTypst(event.client?.ipAddress || 'N/A');
-          const outcome = event.outcome?.result || 'N/A';
+          // Add threat-specific attributes
+          const debugData = event.debugContext?.debugData;
+          if (debugData) {
+            if (debugData.threatDetections) {
+              content += `    [*ThreatDetections:*], [${this.escapeTypst(debugData.threatDetections)}],\n`;
+            }
+            if (debugData.requestUri) {
+              content += `    [*RequestUri:*], [${this.escapeTypst(debugData.requestUri)}],\n`;
+            }
+          }
 
-          content += `  [${this.escapeTypst(timestamp)}], [${actor}], [${ip}], [${outcome}],\n`;
+          if (event.client?.userAgent?.rawUserAgent) {
+            const ua = event.client.userAgent.rawUserAgent;
+            const shortUA = ua.length > 80 ? ua.substring(0, 77) + '...' : ua;
+            content += `    [*RawUserAgent:*], [${this.escapeTypst(shortUA)}],\n`;
+          }
+
+          if (event.securityContext?.asOrg) {
+            content += `    [*ASOrg:*], [${this.escapeTypst(event.securityContext.asOrg)}],\n`;
+          }
+
+          content += `  )
+]
+
+`;
         });
 
-        content += `)\n`;
-
-        if (finding.events.length > 5) {
-          content += `\n#text(size: 9pt, fill: rgb(113, 128, 150), style: "italic")[Showing 5 of ${finding.events.length} events]\n`;
+        if (finding.events.length > 3) {
+          content += `#text(size: 9pt, fill: rgb(113, 128, 150), style: "italic")[Showing 3 of ${finding.events.length} events]\n\n`;
         }
+
+        // Add field explanations
+        content += `
+=== Understanding Event Attributes
+
+#set text(size: 9pt)
+
+- *Result:* The final action taken by security controls (e.g., DENY or ALLOW). This tells you immediately whether the attempt was successful or blocked.
+
+- *Reason:* The high-level categorization of why the result was triggered. Identifies the attack type, such as "Password Spray" rather than a standard bad password.
+
+- *ThreatDetections:* Specific behavioral rules or heuristics that fired. Shows which security parameters caught the malicious activity.
+
+- *RequestUri:* The specific web path or API endpoint targeted. Shows exactly where the adversary is probing your perimeter.
+
+- *RawUserAgent:* The software, browser, or script used. Anomalous agents (like curl or python scripts) indicate automated tooling or bot activity.
+
+- *ASOrg:* The company or ISP that owns the IP address space. Attacks from cloud providers (AWS, DigitalOcean) confirm the attacker is using rented or compromised servers.
+
+#set text(size: 10pt)
+
+`;
       }
 
       // False positives
